@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>黑熊分組抽籤系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
+
+        body {
+            background: radial-gradient(circle at center, #1e1b4b 0%, #0f172a 100%);
+            font-family: 'Noto Sans TC', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+            color: white;
+        }
+
+        .glass-container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 80px rgba(0, 0, 0, 0.5);
+        }
+
+        /* 核心閃爍人名 */
+        .slot-animation {
+            animation: slot-flicker 0.05s infinite;
+            background: linear-gradient(to bottom, #fff, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.8));
+        }
+
+        @keyframes slot-flicker {
+            0% { transform: translateY(-2px) skewX(-5deg); opacity: 0.8; }
+            50% { transform: translateY(0) skewX(5deg); opacity: 1; }
+            100% { transform: translateY(2px) skewX(-5deg); opacity: 0.8; }
+        }
+
+        /* 噴發人名特效 */
+        .burst-name {
+            position: absolute;
+            pointer-events: none;
+            font-weight: 900;
+            z-index: 0;
+            white-space: nowrap;
+            animation: burst var(--duration) ease-out forwards;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        @keyframes burst {
+            0% { 
+                transform: translate(-50%, -50%) scale(0.1) rotate(0deg); 
+                opacity: 0; 
+                left: 50%; 
+                top: 50%;
+            }
+            20% { opacity: 1; }
+            100% { 
+                transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) scale(var(--scale)) rotate(var(--rot)); 
+                opacity: 0;
+                left: 50%;
+                top: 50%;
+            }
+        }
+
+        /* 開獎震動 */
+        .shake {
+            animation: shake-screen 0.4s ease-in-out;
+        }
+
+        @keyframes shake-screen {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-10px); }
+            40%, 80% { transform: translateX(10px); }
+        }
+
+        .group-card {
+            background: rgba(255, 255, 255, 0.95);
+            color: #1e293b;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            animation: pop-in 0.6s ease-out forwards;
+        }
+
+        @keyframes pop-in {
+            from { opacity: 0; transform: scale(0.5) rotate(-5deg); }
+            to { opacity: 1; transform: scale(1) rotate(0); }
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(129, 140, 248, 0.3); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(129, 140, 248, 0.5); }
+
+        .bear-logo {
+            filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.3));
+        }
+
+        .max-view-width {
+            max-width: 1000px;
+        }
+    </style>
+</head>
+<body class="py-6 px-4 relative flex items-center justify-center">
+    <div id="effectContainer" class="fixed inset-0 overflow-hidden pointer-events-none"></div>
+
+    <div class="w-full relative z-10 transition-all duration-500 max-view-width" id="mainWrapper">
+        <div class="glass-container rounded-[2.5rem] p-6 md:p-10 overflow-hidden relative">
+            
+            <div id="headerSection" class="text-center mb-8 flex flex-col items-center">
+                <div class="bear-logo mb-3">
+                    <svg width="60" height="60" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="50" cy="50" r="35" fill="#1a1a1a" />
+                        <circle cx="150" cy="50" r="35" fill="#1a1a1a" />
+                        <circle cx="100" cy="110" r="85" fill="#1a1a1a" />
+                        <circle cx="70" cy="95" r="10" fill="white" />
+                        <circle cx="130" cy="95" r="10" fill="white" />
+                        <circle cx="72" cy="93" r="4" fill="black" />
+                        <circle cx="132" cy="93" r="4" fill="black" />
+                        <ellipse cx="100" cy="130" rx="30" ry="20" fill="#333" />
+                        <path d="M 85 125 Q 100 115 115 125" stroke="#1a1a1a" stroke-width="2" fill="none" />
+                        <circle cx="100" cy="125" r="8" fill="black" />
+                        <path d="M 60 160 L 100 190 L 140 160" stroke="white" stroke-width="12" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </div>
+                
+                <h1 class="text-3xl md:text-5xl font-black text-white mb-2 tracking-tighter drop-shadow-2xl">
+                    <span class="text-indigo-400">黑熊</span>分組<span class="text-purple-400">抽籤</span>系統
+                </h1>
+                <p class="text-indigo-200/60 font-bold tracking-widest uppercase text-[10px]">Black Bear Randomizer Professional</p>
+            </div>
+
+            <div id="setupView" class="space-y-8 max-w-2xl mx-auto">
+                <div>
+                    <label class="block text-xs font-black text-indigo-300 uppercase mb-4 tracking-[0.2em]">01. 選擇組員人數</label>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <label class="relative cursor-pointer group">
+                            <input type="radio" name="groupSize" value="2" checked class="peer sr-only">
+                            <div class="text-center py-4 rounded-2xl border-2 border-white/10 bg-white/5 peer-checked:border-indigo-400 peer-checked:bg-indigo-500/20 transition-all duration-300">
+                                <span class="text-xl font-black text-indigo-300 peer-checked:text-white">2 人</span>
+                            </div>
+                        </label>
+                        <label class="relative cursor-pointer group">
+                            <input type="radio" name="groupSize" value="3" class="peer sr-only">
+                            <div class="text-center py-4 rounded-2xl border-2 border-white/10 bg-white/5 peer-checked:border-indigo-400 peer-checked:bg-indigo-500/20 transition-all duration-300">
+                                <span class="text-xl font-black text-indigo-300 peer-checked:text-white">3 人</span>
+                            </div>
+                        </label>
+                        <label class="relative cursor-pointer group">
+                            <input type="radio" name="groupSize" value="4" class="peer sr-only">
+                            <div class="text-center py-4 rounded-2xl border-2 border-white/10 bg-white/5 peer-checked:border-indigo-400 peer-checked:bg-indigo-500/20 transition-all duration-300">
+                                <span class="text-xl font-black text-indigo-300 peer-checked:text-white">4 人</span>
+                            </div>
+                        </label>
+                        <label class="relative cursor-pointer group">
+                            <input type="radio" name="groupSize" value="5" class="peer sr-only">
+                            <div class="text-center py-4 rounded-2xl border-2 border-white/10 bg-white/5 peer-checked:border-indigo-400 peer-checked:bg-indigo-500/20 transition-all duration-300">
+                                <span class="text-xl font-black text-indigo-300 peer-checked:text-white">5 人</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-end mb-4">
+                        <label class="block text-xs font-black text-indigo-300 uppercase tracking-[0.2em]">02. 成員名單</label>
+                        <span id="countDisplay" class="text-[10px] font-black px-3 py-1 bg-white/10 text-indigo-200 rounded-full border border-white/10">0 人</span>
+                    </div>
+                    <textarea 
+                        id="nameList" 
+                        class="w-full p-6 rounded-3xl border-2 border-white/10 bg-black/20 text-white focus:border-indigo-400 outline-none transition-all duration-300 resize-none custom-scrollbar font-bold"
+                        rows="6"
+                        placeholder="輸入姓名，每行一位..."
+                    ></textarea>
+                </div>
+
+                <div class="flex gap-4 pt-4">
+                    <button 
+                        onclick="startLottery()"
+                        class="flex-[2] bg-indigo-600 hover:bg-indigo-500 text-white font-black py-6 rounded-3xl shadow-[0_0_30px_rgba(79,70,229,0.4)] transform active:scale-95 transition-all text-2xl"
+                    >
+                        立即分組
+                    </button>
+                    <button 
+                        onclick="clearAll()"
+                        class="flex-1 bg-white/5 hover:bg-white/10 text-white/50 font-bold py-6 rounded-3xl transition-all"
+                    >
+                        清空
+                    </button>
+                </div>
+            </div>
+
+            <div id="animationOverlay" class="hidden absolute inset-0 z-50 bg-[#0f172a]/95 flex flex-col items-center justify-center p-8">
+                <div class="relative">
+                    <div class="absolute inset-0 bg-indigo-500 blur-[80px] opacity-20 animate-pulse"></div>
+                    <div id="slotText" class="text-6xl md:text-8xl font-black slot-animation mb-12 relative z-10">
+                        ---
+                    </div>
+                </div>
+                <div class="w-full max-w-sm h-1.5 bg-white/10 rounded-full overflow-hidden mb-4">
+                    <div id="progressBar" class="h-full bg-gradient-to-r from-indigo-500 to-fuchsia-500 w-0"></div>
+                </div>
+                <div id="countdownTimer" class="text-indigo-400 font-black tracking-[0.5em] text-sm animate-pulse">黑熊正在計算命運...</div>
+            </div>
+
+            <div id="resultView" class="hidden">
+                <div class="flex flex-col md:flex-row items-center justify-between mb-8 pb-4 border-b border-white/10 gap-4">
+                    <div class="flex items-center gap-4">
+                        <h2 class="text-3xl font-black text-white">分組結果揭曉</h2>
+                        <span id="resultMeta" class="text-xs bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-full border border-indigo-500/30 font-bold"></span>
+                    </div>
+                    <div class="flex gap-3">
+                        <button onclick="copyTextResult()" class="px-6 py-3 rounded-2xl bg-indigo-500 hover:bg-indigo-400 text-white font-black text-sm transition-all flex items-center gap-2">
+                             複製結果
+                        </button>
+                        <button onclick="backToSetup()" class="px-6 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm transition-all">重新分組</button>
+                    </div>
+                </div>
+                <div id="resultGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-6 max-h-[70vh] overflow-y-auto custom-scrollbar pr-4"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const LOTTERY_DURATION = 7000; 
+
+        const bgMusic = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3'); 
+        const winSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3');
+        const tickSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2539/2539-preview.mp3');
+        tickSound.volume = 0.4;
+
+        let activeTickSounds = [];
+
+        const nameListInput = document.getElementById('nameList');
+        const countDisplay = document.getElementById('countDisplay');
+        const setupView = document.getElementById('setupView');
+        const resultView = document.getElementById('resultView');
+        const animationOverlay = document.getElementById('animationOverlay');
+        const resultGrid = document.getElementById('resultGrid');
+        const slotText = document.getElementById('slotText');
+        const progressBar = document.getElementById('progressBar');
+        const effectContainer = document.getElementById('effectContainer');
+        const mainWrapper = document.getElementById('mainWrapper');
+
+        const MANDATORY_PAIRS = ['吳家維', '吳婉瑜'];
+
+        nameListInput.addEventListener('input', () => {
+            const count = getActiveNames().length;
+            countDisplay.innerText = `${count} 人`;
+        });
+
+        function getActiveNames() {
+            return nameListInput.value.split('\n').map(n => n.trim()).filter(n => n !== '');
+        }
+
+        function spawnBurstEffect(names) {
+            const name = names[Math.floor(Math.random() * names.length)];
+            const div = document.createElement('div');
+            div.className = 'burst-name';
+            div.innerText = name;
+            
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 300 + Math.random() * 500;
+            const x = Math.cos(angle) * dist + 'px';
+            const y = Math.sin(angle) * dist + 'px';
+            
+            div.style.setProperty('--x', x);
+            div.style.setProperty('--y', y);
+            div.style.setProperty('--duration', (0.8 + Math.random() * 0.7) + 's');
+            div.style.setProperty('--scale', 1 + Math.random() * 2);
+            div.style.setProperty('--rot', (Math.random() * 720 - 360) + 'deg');
+            
+            const colors = ['#818cf8', '#c084fc', '#f472b6', '#ffffff', '#6366f1'];
+            div.style.color = colors[Math.floor(Math.random() * colors.length)];
+            
+            effectContainer.appendChild(div);
+            setTimeout(() => div.remove(), 2000);
+        }
+
+        function clearAll() {
+            nameListInput.value = '';
+            countDisplay.innerText = '0 人';
+            resultView.classList.add('hidden');
+            setupView.classList.remove('hidden');
+            effectContainer.innerHTML = '';
+            stopAllSounds();
+        }
+
+        function backToSetup() {
+            resultView.classList.add('hidden');
+            setupView.classList.remove('hidden');
+            effectContainer.innerHTML = '';
+            stopAllSounds();
+        }
+
+        function stopAllSounds() {
+            bgMusic.pause();
+            bgMusic.currentTime = 0;
+            activeTickSounds.forEach(s => {
+                s.pause();
+                s.currentTime = 0;
+            });
+            activeTickSounds = [];
+        }
+
+        async function startLottery() {
+            const allNames = getActiveNames();
+            if (allNames.length < 2) return;
+
+            stopAllSounds();
+
+            bgMusic.playbackRate = 1.0;
+            bgMusic.loop = true;
+            bgMusic.play().catch(() => {});
+
+            setupView.classList.add('hidden');
+            animationOverlay.classList.remove('hidden');
+            
+            const startTime = Date.now();
+            
+            const animationInterval = setInterval(() => {
+                const elapsed = Date.now() - startTime;
+                const progress = (elapsed / LOTTERY_DURATION) * 100;
+                progressBar.style.width = `${progress}%`;
+                
+                if (elapsed > 3000) bgMusic.playbackRate = 1.25;
+                if (elapsed > 5000) bgMusic.playbackRate = 1.5;
+
+                slotText.innerText = allNames[Math.floor(Math.random() * allNames.length)];
+
+                if (Math.random() > 0.3) {
+                    spawnBurstEffect(allNames);
+                    if (Math.random() > (0.8 - (elapsed / (LOTTERY_DURATION * 1.5)))) {
+                        const t = tickSound.cloneNode(true);
+                        activeTickSounds.push(t);
+                        t.play().catch(() => {});
+                        t.onended = () => {
+                            activeTickSounds = activeTickSounds.filter(item => item !== t);
+                        };
+                    }
+                }
+
+                if (elapsed >= LOTTERY_DURATION) {
+                    clearInterval(animationInterval);
+                    stopAllSounds();
+                    winSound.currentTime = 0;
+                    winSound.play().catch(() => {});
+                    mainWrapper.classList.add('shake');
+                    setTimeout(() => mainWrapper.classList.remove('shake'), 500);
+                    processAndShowResults(allNames);
+                }
+            }, 60);
+        }
+
+        function processAndShowResults(names) {
+            const groupSize = parseInt(document.querySelector('input[name="groupSize"]:checked').value);
+            let specialPair = names.filter(n => MANDATORY_PAIRS.includes(n));
+            let others = names.filter(n => !MANDATORY_PAIRS.includes(n));
+            
+            for (let i = others.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [others[i], others[j]] = [others[j], others[i]];
+            }
+
+            const finalGroups = [];
+            if (specialPair.length === 2) {
+                let firstGroup = [...specialPair];
+                while (firstGroup.length < groupSize && others.length > 0) {
+                    firstGroup.push(others.shift());
+                }
+                finalGroups.push(firstGroup);
+            } else {
+                others = [...others, ...specialPair];
+                others.sort(() => Math.random() - 0.5);
+            }
+
+            while (others.length > 0) {
+                finalGroups.push(others.splice(0, groupSize));
+            }
+
+            document.getElementById('resultMeta').innerText = `共 ${names.length} 人 / 分成 ${finalGroups.length} 組`;
+            render(finalGroups, groupSize);
+        }
+
+        function render(groups, targetSize) {
+            animationOverlay.classList.add('hidden');
+            resultView.classList.remove('hidden');
+            resultGrid.innerHTML = '';
+
+            groups.forEach((group, i) => {
+                const card = document.createElement('div');
+                card.className = 'group-card p-5 rounded-[2rem] shadow-2xl flex flex-col';
+                card.style.animationDelay = `${i * 0.1}s`;
+
+                let html = `
+                    <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-3">
+                        <span class="text-lg font-black uppercase tracking-widest text-indigo-500">GROUP ${String(i+1).padStart(2, '0')}</span>
+                        <div class="flex gap-1">
+                            ${Array(targetSize).fill(0).map((_, idx) => `
+                                <div class="w-2 h-2 rounded-full ${idx < group.length ? 'bg-indigo-500' : 'bg-gray-200'}"></div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 gap-3">
+                `;
+
+                group.forEach(person => {
+                    html += `
+                        <div class="py-4 px-3 rounded-xl border-2 border-indigo-50/50 bg-indigo-50/30 text-slate-700 font-black text-center text-xl shadow-sm hover:border-indigo-200 transition-colors">
+                            ${person}
+                        </div>
+                    `;
+                });
+
+                for (let j = group.length; j < targetSize; j++) {
+                    html += `
+                        <div class="py-4 px-3 rounded-xl border-2 border-dashed border-gray-100 text-gray-200 text-center text-sm font-bold">
+                            待定
+                        </div>
+                    `;
+                }
+
+                html += `</div>`;
+                card.innerHTML = html;
+                resultGrid.appendChild(card);
+            });
+        }
+
+        function copyTextResult() {
+            const cards = resultGrid.querySelectorAll('.group-card');
+            let output = "🚀 【黑熊分組結果揭曉】\n\n";
+            cards.forEach((card, i) => {
+                const names = Array.from(card.querySelectorAll('div.grid > div'))
+                    .map(div => div.innerText.trim())
+                    .filter(txt => txt !== '待定')
+                    .join('、');
+                output += `第 ${i + 1} 組：${names}\n`;
+            });
+            
+            const el = document.createElement('textarea');
+            el.value = output;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+            
+            const btn = event.currentTarget;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '已複製到剪貼簿 ✨';
+            btn.classList.replace('bg-indigo-500', 'bg-green-500');
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.classList.replace('bg-green-500', 'bg-indigo-500');
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
