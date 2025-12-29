@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>認識學校教職員工</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            background-color: #f8fafc; /* Tailwind's slate-50 */
+        }
+
+        .staff-card {
+            transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+        }
+
+        .staff-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+
+        .department-tab {
+            transition: all 0.3s ease;
+        }
+
+        .department-tab.active {
+            background-color: #4f46e5; /* Tailwind's indigo-600 */
+            color: white;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        #modal.open {
+            display: flex;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        #modal .modal-content-container {
+            animation: slideInUp 0.4s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { background-color: rgba(0, 0, 0, 0); }
+            to { background-color: rgba(0, 0, 0, 0.5); }
+        }
+
+        @keyframes slideInUp {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 md:py-12">
+        <!-- Header Section -->
+        <div class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold gradient-text mb-4">🏫 認識教職員工</h1>
+            <p class="text-lg text-slate-600 max-w-2xl mx-auto">
+                玉田優秀的教育團隊，為學生提供最佳的學習環境。
+               
+            </p>
+         <p class="text-lg text-slate-600 max-w-2xl mx-auto">
+                請點擊下方類別或使用搜尋功能來認識他們。
+
+ </p>
+        </div>
+
+        <!-- Search and Filter Section -->
+        <div class="mb-10 px-2">
+            <input type="search" id="search-input" placeholder="🔍  按姓名搜尋..." class="w-full max-w-lg mx-auto block p-4 rounded-full bg-white border-2 border-transparent focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition duration-300 shadow-md">
+        </div>
+
+        <!-- Department Tabs -->
+        <div class="flex flex-wrap justify-center gap-3 md:gap-4 mb-10">
+            <button class="department-tab px-5 py-2.5 rounded-full font-semibold text-sm md:text-base bg-white shadow-sm" onclick="handleTabClick(this, 'all')">全部成員</button>
+            <button class="department-tab px-5 py-2.5 rounded-full font-semibold text-sm md:text-base bg-white shadow-sm" onclick="handleTabClick(this, 'admin')">行政團隊</button>
+            <button class="department-tab px-5 py-2.5 rounded-full font-semibold text-sm md:text-base bg-white shadow-sm" onclick="handleTabClick(this, 'teachers')">教師團隊</button>
+        </div>
+
+        <!-- Staff Cards Container -->
+        <div id="staff-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <!-- Staff cards will be injected here by JavaScript -->
+        </div>
+        <p id="no-results" class="text-center text-slate-500 text-lg hidden mt-8">找不到符合條件的教職員。</p>
+    </div>
+
+    <!-- Staff Detail Modal -->
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-auto relative modal-content-container">
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-3xl font-light">&times;</button>
+            <div id="modal-content" class="p-8">
+                <!-- Modal content will be injected here by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA ---
+        const staffData = {
+            admin: [
+                { name: "黃增川", position: "校長", imageUrl: "https://www.ytes.ilc.edu.tw/wp-content/uploads/sites/1281/2020/05/%E9%BB%83%E5%A2%9E%E5%B7%9D%E7%85%A7%E7%89%87-1-683x1024.jpg", specialty: "統籌校務發展", motto: "以學生為本，追求卓越教育" },
+                { name: "陳姿吟", position: "教務主任", imageUrl: "https://www.ytes.ilc.edu.tw/wp-content/uploads/sites/1281/2019/10/DSC_6552-685x1024.jpg", specialty: "綜理教導業務", motto: "創新教學，啟發潛能" },
+                { name: "施文彬", position: "總務主任", imageUrl: "https://www.ytes.ilc.edu.tw/wp-content/uploads/sites/1281/2019/10/DSC_6287-685x1024.jpg", specialty: "綜理總務業務", motto: "提供最安全的學習後盾" },
+                { name: "陳月華", position: "學務組長", imageUrl: "https://www.ytes.ilc.edu.tw/wp-content/uploads/sites/1281/2019/10/DSC_6282-685x1024.jpg", specialty: "學生事務處理、輔導業務", motto: "品格扎根，自律向上" },
+                { name: "楊子誼", position: "教學組長", imageUrl: "https://www.ytes.ilc.edu.tw/wp-content/uploads/sites/1281/2025/06/Image_3-686x1024.jpg", specialty: "教學組、圖書業務、簿本", motto: "啟發潛能，點亮學習"},
+                { name: "江明惠", position: "幹事", imageUrl: "https://2blog.ilc.edu.tw/21834/wp-content/uploads/sites/1281/2019/10/IMG_20190227_152608-169x300.jpg", specialty: "主計業務、人事業務", motto: "財務透明，幸福校園" },
+                { name: "林惠淑", position: "護理師", imageUrl: "https://www.ytes.ilc.edu.tw/wp-content/uploads/sites/1281/2025/06/Image_12.png", specialty: "衛生、文書、零用金", motto: "專業守護，關懷同行" },
+                { name: "蔡春榮", position: "工友", imageUrl: "https://www.ytes.ilc.edu.tw/wp-content/uploads/sites/1281/2019/10/IMG_20180925_145627-768x1024.jpg", specialty: "綜理校園環境及交辦事項", motto: "勤於服務，樂於助人" }         
+            ],
+            teachers: [
+                { name: "朱妍綾", position: "一忠級任導師", imageUrl: "https://www.ytes.ilc.edu.tw/wp-content/uploads/sites/1281/2024/10/Image-006.png", specialty: "特教業務", motto: "以愛灌溉，讓每個孩子都能安心成長" },
+                { name: "邱敏芝", position: "二忠級任導師", imageUrl: "https://www.ytes.ilc.edu.tw/wp-content/uploads/sites/1281/2025/06/Image_6.png", specialty: "環境教育", motto: "用溫柔的目光，看見孩子的努力與可能" },
+                { name: "陳妙秋", position: "三忠級任導師", imageUrl: "https://www.ytes.ilc.edu.tw/wp-content/uploads/sites/1281/2019/10/DSC_7334-685x1024.jpg", specialty: "教科書", motto: "看見每個孩子獨特的光芒" },
+                { name: "吳家維", position: "四忠級任導師", imageUrl: "https://www.ytes.ilc.edu.tw/wp-content/uploads/sites/1281/2019/10/DSC_7376-685x1024.jpg", specialty: "資訊業務與資訊教學", motto: "相信孩子的可能性，陪他們一起綻放" },
+                { name: "林信宏", position: "五忠級任導師", imageUrl: "https://lh3.googleusercontent.com/pw/AP1GczNPkACEFJj9jevMTfKoQKbt8x5Q8GPc9iXneEndp0ZhfWm6ZZdA5wugrwbssIL9mHHrOOMy1qkG9EpjdaT6qjskhR9Aunycxt7DJJ_lmpkupJSS5cTLXxcMXtDNM1iRNCPniA11jsrhnrteTIjjaUvL0Q=w684-h912-s-no-gm?authuser=0", specialty: "午餐業務、性平業務", motto: "用信任激發勇氣，用鼓勵喚醒力量" },
+                { name: "吳婉瑜", position: "六忠級任導師", imageUrl: "https://www.ytes.ilc.edu.tw/wp-content/uploads/sites/1281/2025/06/Image_10-225x300.jpg", specialty: "體育(含社團)", motto: "以生命影響生命，以熱情點亮學習" },
+                { name: "張虹瑩", position: "英文教師", imageUrl: "https://www.ytes.ilc.edu.tw/wp-content/uploads/sites/1281/2020/05/EE6A0720-72A9-49EE-965D-80357FA49B66-768x1024.jpg", specialty: "英語教學、出納", motto: "用心傾聽，用愛同行" }
+                
+            ]
+        };
+
+        // --- STATE ---
+        let currentDepartment = 'all';
+        let currentSearchTerm = '';
+
+        // --- DOM ELEMENTS ---
+        const container = document.getElementById('staff-container');
+        const modal = document.getElementById('modal');
+        const modalContent = document.getElementById('modal-content');
+        const searchInput = document.getElementById('search-input');
+        const noResultsMessage = document.getElementById('no-results');
+
+        // --- FUNCTIONS ---
+        function renderStaff(staffList) {
+            container.innerHTML = '';
+            
+            if (staffList.length === 0) {
+                noResultsMessage.classList.remove('hidden');
+            } else {
+                noResultsMessage.classList.add('hidden');
+            }
+
+            staffList.forEach((person, index) => {
+                const card = document.createElement('div');
+                card.className = 'staff-card bg-white rounded-2xl shadow-lg p-6 text-center cursor-pointer';
+                card.onclick = () => showStaffDetail(person);
+                
+                // Changed from circle to rectangle (rounded-xl)
+                card.innerHTML = `
+                    <div class="w-full aspect-[3/4] mb-4">
+                        <img src="${person.imageUrl}" alt="${person.name}" class="w-full h-full rounded-xl object-cover border-4 border-white shadow-md" onerror="this.onerror=null;this.src='https://placehold.co/400x500/e5e7eb/ffffff?text=NA';">
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-1">${person.name}</h3>
+                    <p class="text-indigo-600 font-semibold mb-3">${person.position}</p>
+                    <div class="bg-slate-100 rounded-lg p-3">
+                        <p class="text-xs text-slate-600 font-medium tracking-wider uppercase">業務掌管</p>
+                        <p class="text-sm text-indigo-700 font-semibold mt-1">${person.specialty}</p>
+                    </div>
+                `;
+                
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                card.style.transition = `all 0.4s ease ${index * 0.05}s`;
+                container.appendChild(card);
+
+                requestAnimationFrame(() => {
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                });
+            });
+        }
+        
+        function updateView() {
+            let staffToDisplay;
+
+            if (currentDepartment === 'all') {
+                staffToDisplay = Object.values(staffData).flat();
+            } else {
+                staffToDisplay = staffData[currentDepartment];
+            }
+
+            if (currentSearchTerm) {
+                staffToDisplay = staffToDisplay.filter(person => 
+                    person.name.toLowerCase().includes(currentSearchTerm.toLowerCase())
+                );
+            }
+            
+            renderStaff(staffToDisplay);
+        }
+
+        function handleTabClick(tabElement, department) {
+            currentDepartment = department;
+            document.querySelectorAll('.department-tab').forEach(tab => tab.classList.remove('active'));
+            tabElement.classList.add('active');
+            updateView();
+        }
+
+        function showStaffDetail(person) {
+            // Changed from circle to rectangle in modal
+            modalContent.innerHTML = `
+                <div class="text-center">
+                    <img src="${person.imageUrl}" alt="${person.name}" class="w-32 h-40 rounded-xl mx-auto mb-4 object-cover border-4 border-slate-100 shadow-lg" onerror="this.onerror=null;this.src='https://placehold.co/400x500/e5e7eb/ffffff?text=NA';">
+                    <h2 class="text-3xl font-bold text-slate-800">${person.name}</h2>
+                    <p class="text-indigo-600 font-semibold text-lg mb-6">${person.position}</p>
+                    
+                    <div class="space-y-4 text-left">
+                        <div class="bg-teal-50 border-l-4 border-teal-400 rounded-r-lg p-4">
+                            <h4 class="font-bold text-teal-900 mb-1">🎯 業務掌管</h4>
+                            <p class="text-teal-800">${person.specialty}</p>
+                        </div>
+                        
+                        <div class="bg-amber-50 border-l-4 border-amber-400 rounded-r-lg p-4">
+                            <h4 class="font-bold text-amber-900 mb-1">💭 教育理念</h4>
+                            <p class="text-amber-800 italic">"${person.motto}"</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            modal.classList.add('open');
+        }
+
+        function closeModal() {
+            modal.classList.remove('open');
+        }
+        
+        // --- EVENT LISTENERS ---
+        searchInput.addEventListener('input', (e) => {
+            currentSearchTerm = e.target.value;
+            updateView();
+        });
+
+        modal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === "Escape" && modal.classList.contains('open')) {
+                closeModal();
+            }
+        });
+
+        // --- INITIALIZATION ---
+        window.onload = () => {
+            document.querySelector('.department-tab').classList.add('active');
+            updateView();
+        };
+
+    </script>
+</body>
+</html>
+
