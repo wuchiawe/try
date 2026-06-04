@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📅 班級月曆聯絡簿 (含快速鍵入)</title>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --secondary-color: #5cb85c;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-color: #333;
+        }
+
+        body {
+            font-family: "Helvetica Neue", Arial, "Noto Sans TC", sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media (min-width: 768px) {
+            .container {
+                grid-template-columns: 55% 42%;
+            }
+        }
+
+        header {
+            grid-column: 1 / -1;
+            text-align: center;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            height: fit-content;
+        }
+
+        h2 {
+            margin-top: 0;
+            color: var(--primary-color);
+            border-bottom: 2px solid #eef2f3;
+            padding-bottom: 8px;
+            font-size: 1.2rem;
+        }
+
+        /* --- 月曆樣式 --- */
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .calendar-header button {
+            background: #eee;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            text-align: center;
+        }
+
+        .weekday {
+            font-weight: bold;
+            color: #666;
+            padding: 5px 0;
+        }
+
+        .day {
+            padding: 10px 0;
+            background: #f9f9f9;
+            border-radius: 6px;
+            cursor: pointer;
+            position: relative;
+            font-weight: 500;
+        }
+
+        .day:hover {
+            background: #e8f4fd;
+        }
+
+        .day.empty {
+            background: transparent;
+            cursor: default;
+        }
+
+        .day.selected {
+            background-color: var(--primary-color) !important;
+            color: white;
+        }
+
+        .day.has-content::after {
+            content: '';
+            position: absolute;
+            bottom: 4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 6px;
+            height: 6px;
+            background-color: var(--secondary-color);
+            border-radius: 50%;
+        }
+
+        /* --- 顯示與輸入區樣式 --- */
+        .date-title {
+            font-size: 1.1rem;
+            color: #e67e22;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .display-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            min-height: 100px;
+            white-space: pre-line;
+            border-left: 4px solid var(--primary-color);
+            margin-bottom: 15px;
+        }
+
+        /* 快速選單樣式 */
+        .quick-select-container {
+            margin-bottom: 10px;
+        }
+
+        select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            font-size: 0.95rem;
+            background-color: #fff;
+        }
+
+        textarea {
+            width: 100%;
+            height: 120px;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            resize: none;
+        }
+
+        .save-btn {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 1rem;
+        }
+
+        .save-btn:hover {
+            background-color: #4cae4c;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1 style="margin:0; font-size: 1.5rem;">🎒黑熊老師 互動月曆聯絡簿</h1>
+    </header>
+
+    <!-- 左側：月曆卡片 -->
+    <div class="card">
+        <div class="calendar-header">
+            <button onclick="changeMonth(-1)">◀ 上個月</button>
+            <h3 id="calendar-title" style="margin:0;">2026年 6月</h3>
+            <button onclick="changeMonth(1)">下個月 ▶</button>
+        </div>
+        <div class="calendar-grid" id="calendar-grid"></div>
+    </div>
+
+    <!-- 右側：內容查看與編輯卡片 -->
+    <div class="card">
+        <h2>📝 聯絡事項詳情</h2>
+        <div class="date-title" id="selected-date-label">請選擇日期</div>
+        
+        <div class="display-box" id="info-display">點擊左側日期，即可查看當日作業與通知。</div>
+        
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+
+        <!-- 老師輸入更新區 -->
+        <h3 style="margin-top:0; font-size:1rem; color:#666;">🛠️ 老師編輯區</h3>
+        
+        <!-- 💡 新增：快速預設選項下拉選單 -->
+        <div class="quick-select-container">
+            <label for="quick-select" style="font-size:0.85rem; color:#666; display:block; margin-bottom:4px;">✨ 快速鍵入常用作業項目：</label>
+            <select id="quick-select" onchange="insertPreset()">
+                <option value="" disabled selected>-- 請選擇要帶入的項目 --</option>
+                <option value="英文A本">📝 英文A本</option>
+                <option value="英文B本">📝 英文B本</option>
+                <option value="甲本第 頁">📝 國語甲本</option>
+                <option value="乙本第 頁">📝 國語乙本</option>
+                <option value="國習第 頁">📝 國語習作</option>
+                <option value="國練第 頁">📝 國語練習簿</option>
+                <option value="成語()">📝成語練習</option>
+                <option value="數練第 頁">📝數學隨堂練習本</option>
+                <option value="數習第 頁"> 📝數學習作</option>
+                <option value="小無敵第 頁"> 📝數學作業簿</option>
+                <option value="社練第 頁"> 📝社會作業簿</option>
+<option value="自練第 頁"> 📝自然作業簿</option>
+<option value="數卷第 回"> 📝數學複習卷</option>
+<option value="自卷第 回"> 📝自然複習卷</option>
+<option value="社卷第 回"> 📝社會複習卷</option>
+            </select>
+        </div>
+
+        <textarea id="info-input" placeholder="請輸入今日作業、重要提醒事項..."></textarea>
+        <button class="save-btn" onclick="saveData()">儲存此日聯絡事項</button>
+    </div>
+</div>
+
+<script>
+    let currentDate = new Date(); // 預設抓取目前當下的真實時間
+    let selectedDateStr = "";
+
+    window.onload = function() {
+        renderCalendar();
+        selectDate(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
+    };
+
+    function renderCalendar() {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        
+        document.getElementById('calendar-title').innerText = `${year}年 ${month + 1}月`;
+        
+        const grid = document.getElementById('calendar-grid');
+        grid.innerHTML = "";
+        
+        const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+        weekdays.forEach(w => {
+            const div = document.createElement('div');
+            div.className = 'weekday';
+            div.innerText = w;
+            grid.appendChild(div);
+        });
+
+        const firstDayIndex = new Date(year, month, 1).getDay();
+        const totalDays = new Date(year, month + 1, 0).getDate();
+
+        for (let i = 0; i < firstDayIndex; i++) {
+            const div = document.createElement('div');
+            div.className = 'day empty';
+            grid.appendChild(div);
+        }
+
+        for (let day = 1; day <= totalDays; day++) {
+            const div = document.createElement('div');
+            div.className = 'day';
+            div.innerText = day;
+            
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            div.dataset.date = dateStr;
+
+            if (localStorage.getItem(dateStr)) {
+                div.classList.add('has-content');
+            }
+
+            if (dateStr === selectedDateStr) {
+                div.classList.add('selected');
+            }
+
+            div.onclick = function() {
+                selectDate(year, month, day);
+            };
+
+            grid.appendChild(div);
+        }
+    }
+
+    function changeMonth(direction) {
+        currentDate.setMonth(currentDate.getMonth() + direction);
+        renderCalendar();
+    }
+
+    function selectDate(year, month, day) {
+        selectedDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        
+        document.getElementById('selected-date-label').innerText = `📅 ${year} 年 ${month + 1} 月 ${day} 日 (聯絡內容)`;
+        
+        const savedData = localStorage.getItem(selectedDateStr) || "🎉 本日尚無聯絡事項或作業。";
+        document.getElementById('info-display').innerText = savedData;
+        document.getElementById('info-input').value = localStorage.getItem(selectedDateStr) || "";
+
+        const dayElements = document.querySelectorAll('.day');
+        dayElements.forEach(el => {
+            if (el.dataset.date === selectedDateStr) {
+                el.classList.add('selected');
+            } else {
+                el.classList.remove('selected');
+            }
+        });
+
+        // 切換日期時，重設下拉選單的狀態
+        document.getElementById('quick-select').selectedIndex = 0;
+    }
+
+    // 💡 新增：將下拉選單選擇的文字，自動插入到輸入框中
+    function insertPreset() {
+        const selectEl = document.getElementById('quick-select');
+        const inputEl = document.getElementById('info-input');
+        
+        if (selectEl.value) {
+            // 如果輸入框本來就有內容，換行後再補上新項目
+            if (inputEl.value.trim() !== "") {
+                inputEl.value += "\n" + selectEl.value;
+            } else {
+                inputEl.value = selectEl.value;
+            }
+            // 讓輸入框自動取得焦點，方便老師直接打字
+            inputEl.focus();
+            // 重設選單，方便下一次重複選擇
+            selectEl.selectedIndex = 0;
+        }
+    }
+
+    function saveData() {
+        const text = document.getElementById('info-input').value.trim();
+        
+        if (text === "") {
+            localStorage.removeItem(selectedDateStr);
+        } else {
+            localStorage.setItem(selectedDateStr, text);
+        }
+        
+        alert("儲存成功！");
+        renderCalendar();
+        selectDate(
+            parseInt(selectedDateStr.split('-')[0]), 
+            parseInt(selectedDateStr.split('-')[1]) - 1, 
+            parseInt(selectedDateStr.split('-')[2])
+        );
+    }
+</script>
+
+</body>
+</html>
