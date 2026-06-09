@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="zh-TW" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>九宮格搶答</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700;900&amp;display=swap" rel="stylesheet">
+  <style>
+    html, body { height: 100%; margin: 0; }
+    * { font-family: 'Noto Sans TC', sans-serif; }
+    .cell-btn { transition: all 0.2s ease; }
+    .cell-btn:hover:not(.claimed) { transform: scale(1.05); box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+    .claimed { animation: claimPulse 0.4s ease; }
+    @keyframes claimPulse { 0%{transform:scale(1)} 50%{transform:scale(1.15)} 100%{transform:scale(1)} }
+    .win-overlay { animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from{opacity:0;transform:scale(0.9)} to{opacity:1;transform:scale(1)} }
+    .modal-backdrop { background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
+  </style>
+  <style>body { box-sizing: border-box; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+  <script src="/_sdk/telemetry_sdk.js"></script>
+</head>
+<body class="h-full bg-slate-900 text-white overflow-auto">
+  <div id="app" class="h-full w-full flex flex-col">
+    <div id="setup-panel" class="flex-1 flex items-center justify-center p-4">
+      <div class="bg-slate-800 rounded-2xl p-8 w-full max-w-lg shadow-2xl border border-slate-700">
+        <h1 id="main-title" class="text-3xl font-black text-center mb-8 text-amber-400">九宮格搶答</h1>
+        <div class="space-y-6">
+          <div><label class="block text-sm font-semibold mb-2 text-slate-300">矩陣大小</label>
+            <div class="flex gap-3">
+              <button onclick="setGrid(3)" id="g3" class="grid-btn flex-1 py-3 rounded-lg font-bold bg-amber-500 text-slate-900">3×3</button> 
+              <button onclick="setGrid(4)" id="g4" class="grid-btn flex-1 py-3 rounded-lg font-bold bg-slate-700 text-slate-300 hover:bg-slate-600">4×4</button> 
+              <button onclick="setGrid(5)" id="g5" class="grid-btn flex-1 py-3 rounded-lg font-bold bg-slate-700 text-slate-300 hover:bg-slate-600">5×5</button>
+            </div>
+          </div>
+          <div><label class="block text-sm font-semibold mb-2 text-slate-300">隊伍數量</label>
+            <div class="flex gap-3">
+              <button onclick="setTeams(2)" id="t2" class="team-btn flex-1 py-3 rounded-lg font-bold bg-amber-500 text-slate-900">2 隊</button> 
+              <button onclick="setTeams(3)" id="t3" class="team-btn flex-1 py-3 rounded-lg font-bold bg-slate-700 text-slate-300 hover:bg-slate-600">3 隊</button> 
+              <button onclick="setTeams(4)" id="t4" class="team-btn flex-1 py-3 rounded-lg font-bold bg-slate-700 text-slate-300 hover:bg-slate-600">4 隊</button>
+            </div>
+          </div>
+          <div><label class="block text-sm font-semibold mb-2 text-slate-300">匯入題庫 (CSV)</label>
+            <p class="text-xs text-slate-400 mb-2">格式：每行一題，欄位為「題目,答案」。題目若含選項可寫在一起，系統會自動換行對齊。</p>
+            <label class="block w-full py-3 px-4 rounded-lg bg-slate-700 border-2 border-dashed border-slate-500 text-center cursor-pointer hover:border-amber-400 transition"> 
+              <span id="file-label" class="text-slate-300"><i data-lucide="upload" class="inline w-4 h-4 mr-1"></i>選擇 CSV 檔案</span> 
+              <input type="file" accept=".csv" onchange="handleCSV(event)" class="hidden"> 
+            </label>
+          </div>
+          <button onclick="startGame()" class="w-full py-4 rounded-xl font-black text-lg bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 hover:from-amber-300 hover:to-orange-400 transition shadow-lg"> 開始遊戲 </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="game-panel" class="flex-1 flex-col items-center p-4 hidden">
+      <div class="w-full max-w-2xl mx-auto">
+        <div class="flex items-center justify-between mb-4">
+          <h2 id="game-title" class="text-xl font-bold text-amber-400">九宮格搶答</h2>
+          <button onclick="resetGame()" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm font-semibold flex items-center gap-1"><i data-lucide="rotate-ccw" class="w-4 h-4"></i>重新開始</button>
+        </div>
+        <div id="turn-indicator" class="text-center py-3 rounded-xl mb-4 font-bold text-lg"></div>
+        <div id="grid-container" class="grid gap-2 mx-auto"></div>
+        <div id="scoreboard" class="mt-4 flex gap-3 justify-center flex-wrap"></div>
+      </div>
+    </div>
+
+    <div id="question-modal" class="fixed inset-0 modal-backdrop hidden z-50 flex items-center justify-center p-4">
+      <div class="bg-slate-800 rounded-2xl p-10 max-w-3xl w-full border border-slate-600 shadow-2xl">
+        <div class="text-center">
+          <p class="text-base text-slate-400 mb-4 font-semibold tracking-wider" id="q-number"></p>
+          
+          <h3 class="text-3xl font-black mb-8 leading-snug text-slate-100" id="q-text"></h3>
+          
+          <div id="q-options" class="max-w-xl mx-auto text-left space-y-3 mb-8 hidden"></div>
+          
+          <div id="q-answer-section" class="mb-8 hidden">
+            <div class="bg-slate-700 rounded-xl p-5 border border-slate-600">
+              <span class="text-sm text-slate-400 font-bold block mb-1">答案：</span>
+              <span id="q-answer" class="font-black text-amber-400 text-2xl tracking-wide"></span>
+            </div>
+          </div>
+          
+          <div id="q-buttons" class="flex gap-4 max-w-xl mx-auto">
+            <button onclick="showAnswer()" id="btn-show" class="flex-1 py-4 rounded-xl font-black text-lg bg-slate-600 hover:bg-slate-500 tracking-wide transition">顯示答案</button> 
+            <button onclick="markCorrect()" id="btn-correct" class="flex-1 py-4 rounded-xl font-black text-lg bg-emerald-600 hover:bg-emerald-500 hidden tracking-wide transition">答對 ✓</button> 
+            <button onclick="markWrong()" id="btn-wrong" class="flex-1 py-4 rounded-xl font-black text-lg bg-red-600 hover:bg-red-500 hidden tracking-wide transition">答錯 ✗</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="win-modal" class="fixed inset-0 modal-backdrop hidden z-50 flex items-center justify-center p-4">
+      <div class="win-overlay bg-slate-800 rounded-2xl p-10 max-w-md w-full border border-amber-400 shadow-2xl text-center">
+        <div id="win-icon" class="text-6xl mb-4">🏆</div>
+        <h2 class="text-3xl font-black mb-2" id="win-text"></h2>
+        <p id="win-subtext" class="text-slate-400 mb-6">完成連線，獲得本次遊戲的優勝！</p>
+        <button onclick="resetGame()" class="px-8 py-3 rounded-xl font-bold bg-amber-500 text-slate-900 hover:bg-amber-400">再來一局</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const TEAM_COLORS = ['#3b82f6','#ef4444','#10b981','#a855f7'];
+    const TEAM_NAMES = ['藍隊','紅隊','綠隊','紫隊'];
+
+    let gridSize = 3, teamCount = 2, importedQuestions = [], finalQuestions = [], board = [], currentTeam = 0, currentCell = -1, gameOver = false;
+
+    const defaultConfig = { game_title: '九宮格搶答', primary_color: '#f59e0b', surface_color: '#1e293b', text_color: '#ffffff', action_color: '#f59e0b', secondary_action_color: '#475569' };
+
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange: async (config) => {
+          const t = config.game_title || defaultConfig.game_title;
+          document.getElementById('main-title').textContent = t;
+          document.getElementById('game-title').textContent = t;
+        },
+        mapToCapabilities: (config) => ({
+          recolorables: [
+            { get:()=>config.primary_color||defaultConfig.primary_color, set:(v)=>{config.primary_color=v;window.elementSdk.setConfig({primary_color:v})} },
+            { get:()=>config.surface_color||defaultConfig.surface_color, set:(v)=>{config.surface_color=v;window.elementSdk.setConfig({surface_color:v})} },
+            { get:()=>config.text_color||defaultConfig.text_color, set:(v)=>{config.text_color=v;window.elementSdk.setConfig({text_color:v})} },
+          ],
+          borderables: [],
+          fontEditable: { get:()=>config.font_family||'Noto Sans TC', set:(v)=>{config.font_family=v;window.elementSdk.setConfig({font_family:v})} },
+          fontSizeable: undefined
+        }),
+        mapToEditPanelValues: (config) => new Map([['game_title', config.game_title || defaultConfig.game_title]])
+      });
+    }
+
+    // 更新幾題為含有選項的格式作為測試範例
+    const DEFAULT_QUESTIONS = [
+      {q:'請問鯨魚屬於哪一類動物？ 1.水生植物 2.陸生植物 3.哺乳動物 4.冷血動物', a:'3.哺乳動物'},
+      {q:'台灣最高的山是哪一座？ 1.阿里山 2.玉山 3.雪山 4.陽明山', a:'2.玉山'},
+      {q:'地球上最大的海洋是？ 1.大西洋 2.印度洋 3.太平洋 4.北極海', a:'3.太平洋'},
+      {q:'水的化學式是什麼？ 1.CO2 2.H2O 3.O2 4.NaCl', a:'2.H2O'},
+      {q:'光的速度大約是多少 km/s？ 1.3萬 2.30萬 3.300萬 4.3000', a:'2.30萬'},
+      {q:'一年通常有多少天？ 1.360天 2.365天 3.366天 4.300天', a:'2.365天'},
+      {q:'台灣的法規首都/中央政府所在地？ 1.高雄 2.台中 3.台北 4.台南', a:'3.台北'},
+      {q:'太陽系中體積最大的行星？ 1.地球 2.火星 3.土星 4.木星', a:'4.木星'},
+      {q:'人體最大的器官是什麼？ 1.肝臟 2.皮膚 3.大腸 4.心臟', a:'2.皮膚'},
+      {q:'日常生活中「一打」是指幾個？ 1.10個 2.12個 3.24個 4.6個', a:'2.12個'},
+      {q:'世界上最長的河流是？ 1.亞馬遜河 2.尼羅河 3.長江 4.密西西比河', a:'2.尼羅河'},
+      {q:'圓周率(Pi)的前三位數字是？ 1.3.14 2.3.15 3.3.16 4.3.12', a:'1.3.14'},
+      {q:'英文字母總共有幾個？ 1.24個 2.25個 3.26個 4.28個', a:'3.26個'},
+      {q:'傳統地理學上，地球有幾大洲？ 1.5大洲 2.6大洲 3.7大洲 4.8大洲', a:'3.7大洲'},
+      {q:'一公里等於多少公尺？ 1.100公尺 2.1000公尺 3.10000公尺 4.10公尺', a:'2.1000公尺'},
+      {q:'日本的首都位於哪裡？ 1.大阪 2.京都 3.東京 4.北海道', a:'3.東京'},
+      {q:'平面幾何中，三角形內角和是多少度？ 1.90度 2.180度 3.270度 4.360度', a:'2.180度'},
+      {q:'數學上最小的質數是多少？ 1.1 2.2 3.3 4.0', a:'2.2'},
+      {q:'世界目前最高的人造建築是？ 1.台北101 2.上海中心大廈 3.哈里發塔 4.帝國大廈', a:'3.哈里發塔'},
+      {q:'聲音在常溫空氣中的傳播速度大約是？ 1.340 m/s 2.100 m/s 3.1200 m/s 4.30萬 km/s', a:'1.340 m/s'}
+    ];
+
+    function setGrid(n) {
+      gridSize = n;
+      document.querySelectorAll('.grid-btn').forEach(b => { b.className = 'grid-btn flex-1 py-3 rounded-lg font-bold bg-slate-700 text-slate-300 hover:bg-slate-600'; });
+      document.getElementById('g'+n).className = 'grid-btn flex-1 py-3 rounded-lg font-bold bg-amber-500 text-slate-900';
+    }
+
+    function setTeams(n) {
+      teamCount = n;
+      document.querySelectorAll('.team-btn').forEach(b => { b.className = 'team-btn flex-1 py-3 rounded-lg font-bold bg-slate-700 text-slate-300 hover:bg-slate-600'; });
+      document.getElementById('t'+n).className = 'team-btn flex-1 py-3 rounded-lg font-bold bg-amber-500 text-slate-900';
+    }
+
+    function handleCSV(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const lines = ev.target.result.split('\n').filter(l => l.trim());
+        importedQuestions = lines.map(l => {
+          const parts = l.split(',');
+          return { q: parts[0]?.trim() || '題目', a: parts.slice(1).join(',').trim() || '答案' };
+        });
+        document.getElementById('file-label').innerHTML = `✓ 已匯入 ${importedQuestions.length} 題`;
+      };
+      reader.readAsText(file);
+    }
+
+    function startGame() {
+      const needed = gridSize * gridSize;
+      let pool = [...importedQuestions];
+      if (pool.length < needed) {
+        const remainingNeeded = needed - pool.length;
+        const backupPool = [...DEFAULT_QUESTIONS].sort(() => Math.random() - 0.5);
+        pool = pool.concat(backupPool.slice(0, remainingNeeded));
+      } else {
+        pool = pool.sort(() => Math.random() - 0.5).slice(0, needed);
+      }
+      
+      finalQuestions = pool;
+      board = Array(needed).fill(null);
+      currentTeam = 0;
+      gameOver = false;
+      
+      document.getElementById('setup-panel').classList.add('hidden');
+      document.getElementById('game-panel').classList.remove('hidden');
+      document.getElementById('game-panel').classList.add('flex');
+      
+      renderBoard();
+      renderTurn();
+      renderScoreboard();
+    }
+
+    function renderBoard() {
+      const container = document.getElementById('grid-container');
+      container.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+      container.innerHTML = '';
+      for (let i = 0; i < gridSize * gridSize; i++) {
+        const btn = document.createElement('button');
+        btn.id = 'cell-' + i;
+        btn.className = 'cell-btn aspect-square rounded-xl text-2xl font-black flex items-center justify-center bg-slate-700 hover:bg-slate-600 border-2 border-slate-600';
+        btn.textContent = i + 1;
+        
+        if (board[i] === 'X') {
+          btn.style.background = '#475569';
+          btn.style.borderColor = '#334155';
+          btn.style.color = '#94a3b8';
+          btn.textContent = '✗';
+          btn.classList.add('claimed');
+          btn.onclick = null;
+        } else if (board[i] !== null) {
+          btn.style.background = TEAM_COLORS[board[i]];
+          btn.style.borderColor = TEAM_COLORS[board[i]];
+          btn.textContent = TEAM_NAMES[board[i]][0];
+          btn.classList.add('claimed');
+          btn.onclick = null;
+        } else {
+          btn.onclick = () => openQuestion(i);
+        }
+        container.appendChild(btn);
+      }
+    }
+
+    function renderTurn() {
+      const el = document.getElementById('turn-indicator');
+      el.style.background = TEAM_COLORS[currentTeam] + '33';
+      el.style.borderLeft = `4px solid ${TEAM_COLORS[currentTeam]}`;
+      el.innerHTML = `目前進攻方：<span style="color:${TEAM_COLORS[currentTeam]}">${TEAM_NAMES[currentTeam]}</span>`;
+    }
+
+    function renderScoreboard() {
+      const el = document.getElementById('scoreboard');
+      el.innerHTML = '';
+      for (let i = 0; i < teamCount; i++) {
+        const count = board.filter(b => b === i).length;
+        const div = document.createElement('div');
+        div.className = 'px-4 py-2 rounded-lg font-bold text-sm';
+        div.style.background = TEAM_COLORS[i] + '33';
+        div.style.color = TEAM_COLORS[i];
+        div.textContent = `${TEAM_NAMES[i]}：${count} 格`;
+        el.appendChild(div);
+      }
+    }
+
+    // 核心優化：解析題目字串，自動切割出 1. 2. 3. 4. 選項
+    function parseQuestionText(fullText) {
+      // 利用 Regex 尋找題目中的 1. 2. 3. 4. (支援全形或半形句點)
+      const optionRegex = /(?=\b[1-4][\.\、]|［[1-4]］|[1-4][\.\、])/g;
+      const parts = fullText.split(optionRegex);
+      
+      const mainQuestion = parts[0].trim();
+      const options = parts.slice(1).map(opt => opt.trim());
+      
+      return { mainQuestion, options };
+    }
+
+    function openQuestion(i) {
+      if (gameOver || board[i] !== null) return;
+      currentCell = i;
+      
+      document.getElementById('q-number').textContent = `第 ${i+1} 題`;
+      
+      // 解析題目與選項
+      const parsed = parseQuestionText(finalQuestions[i].q);
+      document.getElementById('q-text').textContent = parsed.mainQuestion;
+      
+      // 處理選項顯示
+      const optionsContainer = document.getElementById('q-options');
+      optionsContainer.innerHTML = '';
+      
+      if (parsed.options.length > 0) {
+        optionsContainer.classList.remove('hidden');
+        parsed.options.forEach(opt => {
+          const optDiv = document.createElement('div');
+          optDiv.className = 'p-3 rounded-lg bg-slate-700/50 border border-slate-600 text-xl font-bold tracking-wide text-slate-200 pl-6';
+          optDiv.textContent = opt;
+          optionsContainer.appendChild(optDiv);
+        });
+      } else {
+        optionsContainer.classList.add('hidden');
+      }
+
+      document.getElementById('q-answer').textContent = finalQuestions[i].a;
+      document.getElementById('q-answer-section').classList.add('hidden');
+      document.getElementById('btn-show').classList.remove('hidden');
+      document.getElementById('btn-correct').classList.add('hidden');
+      document.getElementById('btn-wrong').classList.add('hidden');
+      document.getElementById('question-modal').classList.remove('hidden');
+    }
+
+    function showAnswer() {
+      document.getElementById('q-answer-section').classList.remove('hidden');
+      document.getElementById('btn-show').classList.add('hidden');
+      document.getElementById('btn-correct').classList.remove('hidden');
+      document.getElementById('btn-wrong').classList.remove('hidden');
+    }
+
+    function markCorrect() {
+      board[currentCell] = currentTeam;
+      document.getElementById('question-modal').classList.add('hidden');
+      renderBoard();
+      renderScoreboard();
+      
+      if (checkWin(currentTeam)) {
+        gameOver = true;
+        document.getElementById('win-icon').textContent = `🏆`;
+        document.getElementById('win-text').textContent = `恭喜 ${TEAM_NAMES[currentTeam]} 完成連線！`;
+        document.getElementById('win-text').style.color = TEAM_COLORS[currentTeam];
+        document.getElementById('win-subtext').textContent = `成功連成一線，獲得本次遊戲的優勝！`;
+        document.getElementById('win-modal').classList.remove('hidden');
+        return;
+      }
+      
+      if (!board.includes(null)) {
+        gameOver = true;
+        document.getElementById('win-icon').textContent = `🤝`;
+        document.getElementById('win-text').textContent = `平手！不分勝負`;
+        document.getElementById('win-text').style.color = '#f59e0b';
+        document.getElementById('win-subtext').textContent = `所有格子已翻完，且無人成功連線。`;
+        document.getElementById('win-modal').classList.remove('hidden');
+        return;
+      }
+    }
+
+    function markWrong() {
+      board[currentCell] = 'X'; 
+      document.getElementById('question-modal').classList.add('hidden');
+      renderBoard();
+      
+      if (!board.includes(null)) {
+        gameOver = true;
+        document.getElementById('win-icon').textContent = `🤝`;
+        document.getElementById('win-text').textContent = `平手！不分勝負`;
+        document.getElementById('win-text').style.color = '#f59e0b';
+        document.getElementById('win-subtext').textContent = `所有格子已翻完，且無人成功連線。`;
+        document.getElementById('win-modal').classList.remove('hidden');
+        return;
+      }
+
+      currentTeam = (currentTeam + 1) % teamCount;
+      renderTurn();
+    }
+
+    function checkWin(team) {
+      const n = gridSize;
+      for (let r = 0; r < n; r++) {
+        let win = true;
+        for (let c = 0; c < n; c++) { if (board[r*n+c] !== team) { win = false; break; } }
+        if (win) return true;
+      }
+      for (let c = 0; c < n; c++) {
+        let win = true;
+        for (let r = 0; r < n; r++) { if (board[r*n+c] !== team) { win = false; break; } }
+        if (win) return true;
+      }
+      let d1 = true, d2 = true;
+      for (let i = 0; i < n; i++) {
+        if (board[i*n+i] !== team) d1 = false;
+        if (board[i*n+(n-1-i)] !== team) d2 = false;
+      }
+      return d1 || d2;
+    }
+
+    function resetGame() {
+      document.getElementById('win-modal').classList.add('hidden');
+      document.getElementById('game-panel').classList.add('hidden');
+      document.getElementById('game-panel').classList.remove('flex');
+      document.getElementById('setup-panel').classList.remove('hidden');
+      importedQuestions = [];
+      finalQuestions = [];
+      document.getElementById('file-label').innerHTML = '<i data-lucide="upload" class="inline w-4 h-4 mr-1"></i>選擇 CSV 檔案';
+      lucide.createIcons();
+    }
+
+    lucide.createIcons();
+  </script>
+</body>
+</html>
