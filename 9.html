@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="zh-TW" class="h-full">
+ <head><script src="/_sdk/telemetry_sdk.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>九宮格搶答</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700;900&amp;display=swap" rel="stylesheet">
+  <style>
+    html, body { height: 100%; margin: 0; }
+    * { font-family: 'Noto Sans TC', sans-serif; }
+    .cell-btn { transition: all 0.2s ease; }
+    .cell-btn:hover:not(.claimed) { transform: scale(1.05); box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+    .claimed { animation: claimPulse 0.4s ease; }
+    @keyframes claimPulse { 0%{transform:scale(1)} 50%{transform:scale(1.15)} 100%{transform:scale(1)} }
+    .win-overlay { animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from{opacity:0;transform:scale(0.9)} to{opacity:1;transform:scale(1)} }
+    .modal-backdrop { background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
+  </style>
+  <style>body { box-sizing: border-box; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full bg-gradient-to-br from-purple-600 via-blue-500 to-cyan-500 text-white overflow-auto">
+  <div id="app" class="h-full w-full flex flex-col">
+   <div id="setup-panel" class="flex-1 flex items-center justify-center p-6">
+    <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl p-10 w-full max-w-2xl shadow-2xl border-4 border-yellow-400">
+     <div class="text-center mb-2 text-5xl">
+      🧠
+     </div>
+     <h1 id="main-title" class="text-5xl font-black text-center mb-2 bg-gradient-to-r from-yellow-300 via-orange-300 to-pink-300 bg-clip-text text-transparent">九宮格連線搶答遊戲</h1>
+     <p class="text-center text-lg text-cyan-300 font-bold mb-1">(選擇題版)</p>
+     <p class="text-center text-sm text-slate-400 mb-8">設計 BY 玉田黑熊老師</p>
+     <div class="space-y-6">
+      <div><label class="block text-lg font-bold mb-3 text-yellow-300">📊 矩陣大小</label>
+       <div class="flex gap-3">
+        <button onclick="setGrid(3)" id="g3" class="grid-btn flex-1 py-4 rounded-xl font-bold text-lg bg-gradient-to-r from-yellow-400 to-yellow-500 text-slate-900 hover:from-yellow-300 hover:to-yellow-400 shadow-lg transform hover:scale-105 transition">3×3</button> <button onclick="setGrid(4)" id="g4" class="grid-btn flex-1 py-4 rounded-xl font-bold text-lg bg-slate-700 text-slate-300 hover:bg-slate-600 shadow-lg transform hover:scale-105 transition">4×4</button> <button onclick="setGrid(5)" id="g5" class="grid-btn flex-1 py-4 rounded-xl font-bold text-lg bg-slate-700 text-slate-300 hover:bg-slate-600 shadow-lg transform hover:scale-105 transition">5×5</button>
+       </div>
+      </div>
+      <div><label class="block text-lg font-bold mb-3 text-pink-300">👥 隊伍數量</label>
+       <div class="flex gap-3">
+        <button onclick="setTeams(2)" id="t2" class="team-btn flex-1 py-4 rounded-xl font-bold text-lg bg-gradient-to-r from-pink-400 to-pink-500 text-white hover:from-pink-300 hover:to-pink-400 shadow-lg transform hover:scale-105 transition">2 隊</button> <button onclick="setTeams(3)" id="t3" class="team-btn flex-1 py-4 rounded-xl font-bold text-lg bg-slate-700 text-slate-300 hover:bg-slate-600 shadow-lg transform hover:scale-105 transition">3 隊</button> <button onclick="setTeams(4)" id="t4" class="team-btn flex-1 py-4 rounded-xl font-bold text-lg bg-slate-700 text-slate-300 hover:bg-slate-600 shadow-lg transform hover:scale-105 transition">4 隊</button>
+       </div>
+      </div>
+      <div><label class="block text-lg font-bold mb-3 text-cyan-300">📋 匯入題庫 (CSV)</label>
+       <p class="text-sm text-slate-300 mb-3 leading-relaxed">格式：每行一題，欄位為「題目,正確答案(1-4),選項一,選項二,選項三,選項四」。正確答案欄中填入 1、2、3 或 4 代表對應選項。</p><label class="block w-full py-4 px-6 rounded-xl bg-gradient-to-r from-slate-700 to-slate-600 border-3 border-dashed border-cyan-400 text-center cursor-pointer hover:border-yellow-300 hover:bg-slate-600 transition font-bold text-lg"> <span id="file-label" class="text-cyan-300"><i data-lucide="upload" class="inline w-5 h-5 mr-2"></i>選擇 CSV 檔案</span> <input type="file" accept=".csv" onchange="handleCSV(event)" class="hidden"> </label>
+      </div><button onclick="startGame()" class="w-full py-5 rounded-xl font-black text-xl bg-gradient-to-r from-green-400 to-emerald-500 text-white hover:from-green-300 hover:to-emerald-400 transition shadow-xl transform hover:scale-105">🚀 開始遊戲</button>
+     </div>
+    </div>
+   </div>
+   <div id="game-panel" class="flex-1 flex-col items-center p-4 hidden bg-gradient-to-br from-emerald-50 via-cyan-50 to-blue-100 overflow-y-auto">
+    <div class="w-full max-w-2xl mx-auto">
+     <div class="flex items-center justify-between mb-3 gap-2">
+      <h2 id="game-title" class="text-2xl font-black bg-gradient-to-r from-blue-600 via-cyan-600 to-green-600 bg-clip-text text-transparent">九宮格連線搶答</h2><button onclick="resetGame()" class="px-4 py-2 rounded-lg bg-gradient-to-r from-orange-400 to-red-500 hover:from-orange-300 hover:to-red-400 text-white font-bold text-sm flex items-center gap-1 shadow-lg transform hover:scale-105 transition"><i data-lucide="rotate-ccw" class="w-4 h-4"></i>重新開始</button>
+     </div>
+     <div id="turn-indicator" class="text-center py-2 rounded-lg mb-3 font-bold text-lg border-3 shadow-lg bg-white"></div>
+     <div id="grid-container" class="grid gap-2 mx-auto mb-4"></div>
+     <div id="scoreboard" class="flex gap-2 justify-center flex-wrap text-sm"></div>
+    </div>
+   </div>
+   <div id="question-modal" class="fixed inset-0 modal-backdrop hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-gradient-to-br from-white via-blue-50 to-cyan-50 rounded-3xl p-12 max-w-4xl w-full border-4 border-cyan-300 shadow-2xl">
+     <div class="text-center">
+      <p class="text-xl text-cyan-600 mb-4 font-bold tracking-wider" id="q-number"></p>
+      <h3 class="text-4xl font-black mb-10 leading-relaxed text-blue-900" id="q-text"></h3>
+      <div id="q-options" class="max-w-3xl mx-auto text-left grid grid-cols-2 gap-4 mb-8 hidden"></div>
+      <div id="q-answer-section" class="mb-8 hidden">
+       <div class="bg-gradient-to-r from-emerald-100 to-green-100 rounded-2xl p-6 border-4 border-emerald-400 shadow-lg">
+        <span class="text-lg text-emerald-700 font-bold block mb-2">✓ 答對！</span> <span id="q-answer" class="font-black text-emerald-600 text-3xl tracking-wide"></span>
+       </div>
+      </div>
+      <div id="q-wrong-section" class="mb-8 hidden">
+       <div class="bg-gradient-to-r from-red-100 to-pink-100 rounded-2xl p-6 border-4 border-red-300 shadow-lg">
+        <span class="text-lg text-red-700 font-bold block mb-2">✗ 答錯!</span> <span id="q-correct-answer" class="font-black text-red-600 text-3xl tracking-wide"></span>
+       </div>
+      </div>
+      <div id="q-message" class="mb-8 text-2xl font-bold text-center text-blue-600 hidden"></div>
+      <div id="q-buttons" class="flex gap-4 max-w-2xl mx-auto">
+       <button onclick="nextQuestion()" id="btn-next" class="flex-1 py-5 rounded-xl font-black text-xl bg-gradient-to-r from-emerald-400 to-green-500 hover:from-emerald-300 hover:to-green-400 text-white tracking-wide transition shadow-lg transform hover:scale-105 hidden">✓ 繼續搶答</button> <button onclick="closeQuestion()" id="btn-close" class="flex-1 py-5 rounded-xl font-black text-xl bg-gradient-to-r from-orange-400 to-red-500 hover:from-orange-300 hover:to-red-400 text-white tracking-wide transition shadow-lg transform hover:scale-105 hidden">→ 換隊伍進攻</button>
+      </div>
+     </div>
+    </div>
+   </div>
+   <div id="win-modal" class="fixed inset-0 modal-backdrop hidden z-50 flex items-center justify-center p-4">
+    <div class="win-overlay bg-slate-800 rounded-2xl p-10 max-w-md w-full border border-amber-400 shadow-2xl text-center">
+     <div id="win-icon" class="text-6xl mb-4">
+      🏆
+     </div>
+     <h2 class="text-3xl font-black mb-2" id="win-text"></h2>
+     <p id="win-subtext" class="text-slate-400 mb-6">完成連線，獲得本次遊戲的優勝！</p><button onclick="resetGame()" class="px-8 py-3 rounded-xl font-bold bg-amber-500 text-slate-900 hover:bg-amber-400">再來一局</button>
+    </div>
+   </div>
+  </div>
+  <script>
+    const TEAM_COLORS = ['#3b82f6','#ef4444','#10b981','#a855f7'];
+    const TEAM_NAMES = ['藍隊','紅隊','綠隊','紫隊'];
+
+    let gridSize = 3, teamCount = 2, importedQuestions = [], finalQuestions = [], board = [], currentTeam = 0, currentCell = -1, gameOver = false;
+
+    const defaultConfig = { game_title: '九宮格搶答', primary_color: '#f59e0b', surface_color: '#1e293b', text_color: '#ffffff', action_color: '#f59e0b', secondary_action_color: '#475569' };
+
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange: async (config) => {
+          const t = config.game_title || defaultConfig.game_title;
+          document.getElementById('main-title').textContent = t;
+          document.getElementById('game-title').textContent = t;
+        },
+        mapToCapabilities: (config) => ({
+          recolorables: [
+            { get:()=>config.primary_color||defaultConfig.primary_color, set:(v)=>{config.primary_color=v;window.elementSdk.setConfig({primary_color:v})} },
+            { get:()=>config.surface_color||defaultConfig.surface_color, set:(v)=>{config.surface_color=v;window.elementSdk.setConfig({surface_color:v})} },
+            { get:()=>config.text_color||defaultConfig.text_color, set:(v)=>{config.text_color=v;window.elementSdk.setConfig({text_color:v})} },
+          ],
+          borderables: [],
+          fontEditable: { get:()=>config.font_family||'Noto Sans TC', set:(v)=>{config.font_family=v;window.elementSdk.setConfig({font_family:v})} },
+          fontSizeable: undefined
+        }),
+        mapToEditPanelValues: (config) => new Map([['game_title', config.game_title || defaultConfig.game_title]])
+      });
+    }
+
+    const DEFAULT_QUESTIONS = [
+      {q:'請問鯨魚屬於哪一類動物？', correctOptionIndex: 2, options:['水生植物','陸生植物','哺乳動物','冷血動物']},
+      {q:'台灣最高的山是哪一座？', correctOptionIndex: 1, options:['阿里山','玉山','雪山','陽明山']},
+      {q:'地球上最大的海洋是？', correctOptionIndex: 2, options:['大西洋','印度洋','太平洋','北極海']},
+      {q:'水的化學式是什麼？', correctOptionIndex: 1, options:['CO2','H2O','O2','NaCl']},
+      {q:'光的速度大約是多少 km/s？', correctOptionIndex: 1, options:['3萬','30萬','300萬','3000']},
+      {q:'一年通常有多少天？', correctOptionIndex: 1, options:['360天','365天','366天','300天']},
+      {q:'台灣的法規首都/中央政府所在地？', correctOptionIndex: 2, options:['高雄','台中','台北','台南']},
+      {q:'太陽系中體積最大的行星？', correctOptionIndex: 3, options:['地球','火星','土星','木星']},
+      {q:'人體最大的器官是什麼？', correctOptionIndex: 1, options:['肝臟','皮膚','大腸','心臟']},
+      {q:'日常生活中「一打」是指幾個？', correctOptionIndex: 1, options:['10個','12個','24個','6個']},
+      {q:'世界上最長的河流是？', correctOptionIndex: 1, options:['亞馬遜河','尼羅河','長江','密西西比河']},
+      {q:'圓周率(Pi)的前三位數字是？', correctOptionIndex: 0, options:['3.14','3.15','3.16','3.12']},
+      {q:'英文字母總共有幾個？', correctOptionIndex: 2, options:['24個','25個','26個','28個']},
+      {q:'傳統地理學上，地球有幾大洲？', correctOptionIndex: 2, options:['5大洲','6大洲','7大洲','8大洲']},
+      {q:'一公里等於多少公尺？', correctOptionIndex: 1, options:['100公尺','1000公尺','10000公尺','10公尺']},
+      {q:'日本的首都位於哪裡？', correctOptionIndex: 2, options:['大阪','京都','東京','北海道']},
+      {q:'平面幾何中，三角形內角和是多少度？', correctOptionIndex: 1, options:['90度','180度','270度','360度']},
+      {q:'數學上最小的質數是多少？', correctOptionIndex: 1, options:['1','2','3','0']},
+      {q:'世界目前最高的人造建築是？', correctOptionIndex: 2, options:['台北101','上海中心大廈','哈里發塔','帝國大廈']},
+      {q:'聲音在常溫空氣中的傳播速度大約是？', correctOptionIndex: 0, options:['340 m/s','100 m/s','1200 m/s','30萬 km/s']}
+    ];
+
+    function setGrid(n) {
+      gridSize = n;
+      document.querySelectorAll('.grid-btn').forEach(b => { b.className = 'grid-btn flex-1 py-3 rounded-lg font-bold bg-slate-700 text-slate-300 hover:bg-slate-600'; });
+      document.getElementById('g'+n).className = 'grid-btn flex-1 py-3 rounded-lg font-bold bg-amber-500 text-slate-900';
+    }
+
+    function setTeams(n) {
+      teamCount = n;
+      document.querySelectorAll('.team-btn').forEach(b => { b.className = 'team-btn flex-1 py-3 rounded-lg font-bold bg-slate-700 text-slate-300 hover:bg-slate-600'; });
+      document.getElementById('t'+n).className = 'team-btn flex-1 py-3 rounded-lg font-bold bg-amber-500 text-slate-900';
+    }
+
+    function handleCSV(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const lines = ev.target.result.split('\n').filter(l => l.trim());
+        importedQuestions = lines.map(l => {
+          const parts = l.split(',').map(p => p.trim());
+          if (parts.length >= 6) {
+            return { 
+              q: parts[0] || '題目', 
+              correctOptionIndex: parseInt(parts[1]) - 1,
+              options: [parts[2], parts[3], parts[4], parts[5]]
+            };
+          } else {
+            return { q: parts[0] || '題目', correctOptionIndex: 0, options: [] };
+          }
+        });
+        document.getElementById('file-label').innerHTML = `✓ 已匯入 ${importedQuestions.length} 題`;
+      };
+      reader.readAsText(file);
+    }
+
+    function startGame() {
+      const needed = gridSize * gridSize;
+      let pool = [...importedQuestions];
+      if (pool.length < needed) {
+        const remainingNeeded = needed - pool.length;
+        const backupPool = [...DEFAULT_QUESTIONS].sort(() => Math.random() - 0.5);
+        pool = pool.concat(backupPool.slice(0, remainingNeeded));
+      } else {
+        pool = pool.sort(() => Math.random() - 0.5).slice(0, needed);
+      }
+
+      finalQuestions = pool;
+      board = Array(needed).fill(null);
+      currentTeam = 0;
+      gameOver = false;
+
+      document.getElementById('setup-panel').classList.add('hidden');
+      document.getElementById('game-panel').classList.remove('hidden');
+      document.getElementById('game-panel').classList.add('flex');
+
+      renderBoard();
+      renderTurn();
+      renderScoreboard();
+    }
+
+    function renderBoard() {
+      const container = document.getElementById('grid-container');
+      container.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+      container.innerHTML = '';
+      for (let i = 0; i < gridSize * gridSize; i++) {
+        const btn = document.createElement('button');
+        btn.id = 'cell-' + i;
+        btn.className = 'cell-btn aspect-square rounded-lg text-xl font-black flex items-center justify-center bg-gradient-to-br from-white to-blue-50 hover:from-blue-100 hover:to-cyan-100 border-3 border-blue-200 shadow-md transform hover:scale-110 transition text-black';
+        btn.textContent = i + 1;
+
+        if (board[i] !== null) {
+          btn.style.background = `linear-gradient(135deg, ${TEAM_COLORS[board[i]]} 0%, ${TEAM_COLORS[board[i]]}dd 100%)`;
+          btn.style.borderColor = TEAM_COLORS[board[i]];
+          btn.textContent = TEAM_NAMES[board[i]][0];
+          btn.classList.add('claimed');
+          btn.onclick = null;
+        } else {
+          btn.onclick = () => openQuestion(i);
+        }
+        container.appendChild(btn);
+      }
+    }
+
+    function renderTurn() {
+      const el = document.getElementById('turn-indicator');
+      el.style.background = TEAM_COLORS[currentTeam] + '15';
+      el.style.borderColor = TEAM_COLORS[currentTeam];
+      el.innerHTML = `🎯 目前進攻方：<span style="color:${TEAM_COLORS[currentTeam]};font-size:1.3em;font-weight:900">${TEAM_NAMES[currentTeam]}</span> 🎯`;
+    }
+
+    function renderScoreboard() {
+      const el = document.getElementById('scoreboard');
+      el.innerHTML = '';
+      for (let i = 0; i < teamCount; i++) {
+        const count = board.filter(b => b === i).length;
+        const div = document.createElement('div');
+        div.className = 'px-3 py-2 rounded-lg font-bold text-sm shadow-md transform hover:scale-105 transition border-2';
+        div.style.background = TEAM_COLORS[i] + '15';
+        div.style.color = TEAM_COLORS[i];
+        div.style.borderColor = TEAM_COLORS[i];
+        div.textContent = `${TEAM_NAMES[i]}：${count} 格`;
+        el.appendChild(div);
+      }
+    }
+
+    function parseQuestionText(fullText) {
+      const optionRegex = /(?=\b[1-4][\.\、]|［[1-4]］|[1-4][\.\、])/g;
+      const parts = fullText.split(optionRegex);
+      const mainQuestion = parts[0].trim();
+      const options = parts.slice(1).map(opt => opt.trim());
+      return { mainQuestion, options };
+    }
+
+    function openQuestion(i) {
+      if (gameOver || board[i] !== null) return;
+      currentCell = i;
+
+      document.getElementById('q-number').textContent = `第 ${i+1} 題`;
+      document.getElementById('q-text').textContent = finalQuestions[i].q;
+
+      const optionsContainer = document.getElementById('q-options');
+      optionsContainer.innerHTML = '';
+
+      if (finalQuestions[i].options && finalQuestions[i].options.length === 4) {
+        optionsContainer.classList.remove('hidden');
+        finalQuestions[i].options.forEach(opt => {
+          const optBtn = document.createElement('button');
+          optBtn.className = 'p-5 rounded-2xl bg-gradient-to-br from-blue-100 to-cyan-100 hover:from-blue-200 hover:to-cyan-200 border-3 border-blue-300 text-lg font-black tracking-wide text-blue-900 transition shadow-lg transform hover:scale-105';
+          optBtn.textContent = opt;
+          optBtn.onclick = () => checkAnswer(opt);
+          optionsContainer.appendChild(optBtn);
+        });
+      } else {
+        optionsContainer.classList.add('hidden');
+      }
+
+      document.getElementById('q-answer-section').classList.add('hidden');
+      document.getElementById('q-wrong-section').classList.add('hidden');
+      document.getElementById('q-message').classList.add('hidden');
+      document.getElementById('btn-next').classList.add('hidden');
+      document.getElementById('btn-close').classList.add('hidden');
+      document.getElementById('question-modal').classList.remove('hidden');
+    }
+
+    function checkAnswer(selectedOption) {
+      const correctOptionIndex = finalQuestions[currentCell].correctOptionIndex;
+      const selectedIndex = finalQuestions[currentCell].options.indexOf(selectedOption);
+      const isCorrect = selectedIndex === correctOptionIndex;
+      
+      // 禁用所有選項按鈕
+      document.querySelectorAll('#q-options button').forEach(btn => {
+        btn.disabled = true;
+        btn.style.opacity = '0.6';
+        btn.style.cursor = 'not-allowed';
+      });
+
+      if (isCorrect) {
+        // 答對：顯示綠色答案區
+        document.getElementById('q-answer').textContent = finalQuestions[currentCell].options[correctOptionIndex];
+        document.getElementById('q-answer-section').classList.remove('hidden');
+        document.getElementById('q-message').textContent = '🎉 恭喜你答對了，請繼續搶答其他題目！';
+        document.getElementById('q-message').classList.remove('hidden');
+        document.getElementById('btn-next').classList.remove('hidden');
+      } else {
+        // 答錯：顯示紅色提示
+        document.getElementById('q-correct-answer').textContent = finalQuestions[currentCell].options[correctOptionIndex];
+        document.getElementById('q-wrong-section').classList.remove('hidden');
+        document.getElementById('q-message').textContent = '💪 喔喔!答錯了，請加油加油！';
+        document.getElementById('q-message').classList.remove('hidden');
+        document.getElementById('btn-close').classList.remove('hidden');
+      }
+    }
+
+    function nextQuestion() {
+      // 答對：佔領格子，當前隊伍繼續進攻
+      board[currentCell] = currentTeam;
+      document.getElementById('question-modal').classList.add('hidden');
+      renderBoard();
+      renderScoreboard();
+
+      if (checkWin(currentTeam)) {
+        gameOver = true;
+        document.getElementById('win-icon').textContent = '🏆';
+        document.getElementById('win-text').textContent = `🎉 恭喜 ${TEAM_NAMES[currentTeam]} 完成連線！`;
+        document.getElementById('win-text').style.color = TEAM_COLORS[currentTeam];
+        document.getElementById('win-subtext').textContent = '✨ 成功連成一線，獲得本次遊戲的優勝！✨';
+        document.getElementById('win-modal').classList.remove('hidden');
+        return;
+      }
+
+      if (!board.includes(null)) {
+        gameOver = true;
+        // 計算各隊佔領的格子數
+        const teamScores = [];
+        for (let i = 0; i < teamCount; i++) {
+          teamScores.push(board.filter(b => b === i).length);
+        }
+        const maxScore = Math.max(...teamScores);
+        const winnersIndex = teamScores.filter(s => s === maxScore);
+        const winnerCount = winnersIndex.length;
+
+        if (winnerCount > 1) {
+          // 多隊並列最高分
+          const winners = [];
+          for (let i = 0; i < teamCount; i++) {
+            if (teamScores[i] === maxScore) winners.push(TEAM_NAMES[i]);
+          }
+          document.getElementById('win-icon').textContent = '🤝';
+          document.getElementById('win-text').textContent = `${winners.join('、')} 並列優勝！`;
+          document.getElementById('win-text').style.color = '#fbbf24';
+          document.getElementById('win-subtext').textContent = `所有格子已翻完，${winners.join('、')}各佔${maxScore}格並列最高！`;
+        } else {
+          // 單一隊伍勝出
+          const winnerIndex = teamScores.indexOf(maxScore);
+          document.getElementById('win-icon').textContent = '🥇';
+          document.getElementById('win-text').textContent = `${TEAM_NAMES[winnerIndex]} 獲得勝利！`;
+          document.getElementById('win-text').style.color = TEAM_COLORS[winnerIndex];
+          document.getElementById('win-subtext').textContent = `所有格子已翻完，${TEAM_NAMES[winnerIndex]}以${maxScore}格的成績獲勝！`;
+        }
+        document.getElementById('win-modal').classList.remove('hidden');
+        return;
+      }
+
+      renderTurn();
+    }
+
+    function closeQuestion() {
+      // 答錯：不佔領格子，換隊伍進攻
+      document.getElementById('question-modal').classList.add('hidden');
+      renderBoard();
+      
+      currentTeam = (currentTeam + 1) % teamCount;
+      renderTurn();
+    }
+
+    function checkWin(team) {
+      const n = gridSize;
+      for (let r = 0; r < n; r++) {
+        let win = true;
+        for (let c = 0; c < n; c++) { if (board[r*n+c] !== team) { win = false; break; } }
+        if (win) return true;
+      }
+      for (let c = 0; c < n; c++) {
+        let win = true;
+        for (let r = 0; r < n; r++) { if (board[r*n+c] !== team) { win = false; break; } }
+        if (win) return true;
+      }
+      let d1 = true, d2 = true;
+      for (let i = 0; i < n; i++) {
+        if (board[i*n+i] !== team) d1 = false;
+        if (board[i*n+(n-1-i)] !== team) d2 = false;
+      }
+      return d1 || d2;
+    }
+
+    function resetGame() {
+      document.getElementById('win-modal').classList.add('hidden');
+      document.getElementById('game-panel').classList.add('hidden');
+      document.getElementById('game-panel').classList.remove('flex');
+      document.getElementById('setup-panel').classList.remove('hidden');
+      importedQuestions = [];
+      finalQuestions = [];
+      document.getElementById('file-label').innerHTML = '<i data-lucide="upload" class="inline w-4 h-4 mr-1"></i>選擇 CSV 檔案';
+      lucide.createIcons();
+    }
+
+    lucide.createIcons();
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a0956a393edd2907',t:'MTc4MTA2MzQ1OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
