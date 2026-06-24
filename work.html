@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>活動照片紀錄表</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <style>
+    body { font-family: 'Libre Franklin', 'Noto Sans TC', sans-serif; background-color: #f3f4f6; }
+    .a4-page { width: 210mm; min-height: 297mm; margin: 0 auto; box-sizing: border-box; background: white; }
+    .photo-slot {
+      border: 2px dashed #7fb3d4;
+      background: #f0f7fc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      aspect-ratio: 4 / 3;
+      cursor: pointer;
+      overflow: hidden;
+      position: relative;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    .photo-slot:hover { border-color: #1a4a75; background: #e6f2fa; }
+    .photo-slot img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
+    .photo-slot .placeholder { pointer-events: none; }
+    .field-input, .print-text {
+      border: none; border-bottom: 1px solid #1a4a75; background: transparent;
+      outline: none; flex: 1; font-size: 14px; padding: 4px; width: 100%;
+    }
+    .title-input, .print-title {
+      border: none; border-bottom: 3px solid #1a4a75; background: transparent;
+      outline: none; width: 100%; text-align: center; font-size: 24px;
+      font-weight: 700; color: #1a4a75; padding-bottom: 8px;
+    }
+    .desc-textarea, .print-desc {
+      border: 1px solid #1a4a75; background: transparent; outline: none;
+      width: 100%; font-size: 14px; padding: 8px; resize: none; border-radius: 4px; min-height: 80px;
+    }
+    .photo-desc, .print-photo-desc {
+      border: none; border-bottom: 1px dashed #999; background: transparent;
+      outline: none; width: 100%; font-size: 13px; padding: 4px; margin-top: 4px; text-align: center;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-6 gap-4">
+
+  <div id="edit-toolbar" class="w-full max-w-[210mm] flex justify-end">
+    <button class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-semibold flex items-center gap-2 shadow-md transition" id="view-result-btn"> 
+      <i data-lucide="eye" style="width:18px;height:18px;"></i>
+      <span>預覽與匯出 PDF</span>
+    </button>
+  </div>
+
+  <div id="result-toolbar" class="hidden w-full max-w-[210mm] flex justify-between items-center">
+    <button class="bg-gray-500 hover:bg-gray-600 text-white px-5 py-2.5 rounded-lg font-semibold flex items-center gap-2 shadow-md transition" id="back-btn"> 
+      <i data-lucide="arrow-left" style="width:18px;height:18px;"></i>
+      <span>返回編輯</span>
+    </button> 
+    <button class="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg font-semibold flex items-center gap-2 shadow-md transition" id="download-pdf-btn"> 
+      <i data-lucide="download" style="width:18px;height:18px;"></i>
+      <span>確認下載 PDF</span>
+    </button>
+  </div>
+
+  <main id="pdf-content" class="a4-page shadow-xl p-12 flex flex-col justify-between">
+    <div id="content-inside">
+      <header class="mb-6">
+        <div class="render-container">
+          <input type="text" class="title-input" placeholder="請輸入表單大標題" id="input-title" value="活動照片紀錄表">
+        </div>
+        <div class="grid grid-cols-2 gap-4 text-sm mt-6">
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-gray-700 whitespace-nowrap">活動名稱：</span>
+            <div class="render-container flex-1">
+              <input type="text" class="field-input" placeholder="請輸入活動名稱">
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-gray-700 whitespace-nowrap">日期時間：</span>
+            <div class="render-container flex-1">
+              <input type="text" class="field-input" placeholder="請輸入日期與時間">
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-gray-700 whitespace-nowrap">詳細地點：</span>
+            <div class="render-container flex-1">
+              <input type="text" class="field-input" placeholder="請輸入詳細地點">
+            </div>
+          </div>
+        </div>
+        <div class="mt-4">
+          <span class="font-bold text-gray-700 block mb-1">活動說明：</span>
+          <div class="render-container">
+            <textarea class="desc-textarea" rows="3" placeholder="請在此處輸入本次活動的簡要說明與成效..."></textarea>
+          </div>
+        </div>
+      </header>
+
+      <div class="grid grid-cols-2 gap-x-6 gap-y-4">
+        <div class="flex flex-col items-center photo-group">
+          <div class="photo-slot w-full" onclick="this.querySelector('input').click()">
+            <input type="file" accept="image/*" class="hidden" onchange="handlePhoto(this)"> 
+            <span class="placeholder text-sm opacity-60 text-center px-2">📷 點擊上傳照片 1</span>
+          </div>
+          <div class="render-container w-full">
+            <input type="text" class="photo-desc" placeholder="請輸入照片 1 的文字說明">
+          </div>
+        </div>
+        <div class="flex flex-col items-center photo-group">
+          <div class="photo-slot w-full" onclick="this.querySelector('input').click()">
+            <input type="file" accept="image/*" class="hidden" onchange="handlePhoto(this)"> 
+            <span class="placeholder text-sm opacity-60 text-center px-2">📷 點擊上傳照片 2</span>
+          </div>
+          <div class="render-container w-full">
+            <input type="text" class="photo-desc" placeholder="請輸入照片 2 的文字說明">
+          </div>
+        </div>
+        <div class="flex flex-col items-center photo-group">
+          <div class="photo-slot w-full" onclick="this.querySelector('input').click()">
+            <input type="file" accept="image/*" class="hidden" onchange="handlePhoto(this)"> 
+            <span class="placeholder text-sm opacity-60 text-center px-2">📷 點擊上傳照片 3</span>
+          </div>
+          <div class="render-container w-full">
+            <input type="text" class="photo-desc" placeholder="請輸入照片 3 的文字說明">
+          </div>
+        </div>
+        <div class="flex flex-col items-center photo-group">
+          <div class="photo-slot w-full" onclick="this.querySelector('input').click()">
+            <input type="file" accept="image/*" class="hidden" onchange="handlePhoto(this)"> 
+            <span class="placeholder text-sm opacity-60 text-center px-2">📷 點擊上傳照片 4</span>
+          </div>
+          <div class="render-container w-full">
+            <input type="text" class="photo-desc" placeholder="請輸入照片 4 的文字說明">
+          </div>
+        </div>
+        <div class="flex flex-col items-center photo-group">
+          <div class="photo-slot w-full" onclick="this.querySelector('input').click()">
+            <input type="file" accept="image/*" class="hidden" onchange="handlePhoto(this)"> 
+            <span class="placeholder text-sm opacity-60 text-center px-2">📷 點擊上傳照片 5</span>
+          </div>
+          <div class="render-container w-full">
+            <input type="text" class="photo-desc" placeholder="請輸入照片 5 的文字說明">
+          </div>
+        </div>
+        <div class="flex flex-col items-center photo-group">
+          <div class="photo-slot w-full" onclick="this.querySelector('input').click()">
+            <input type="file" accept="image/*" class="hidden" onchange="handlePhoto(this)"> 
+            <span class="placeholder text-sm opacity-60 text-center px-2">📷 點擊上傳照片 6</span>
+          </div>
+          <div class="render-container w-full">
+            <input type="text" class="photo-desc" placeholder="請輸入照片 6 的文字說明">
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    lucide.createIcons();
+
+    const editToolbar = document.getElementById('edit-toolbar');
+    const resultToolbar = document.getElementById('result-toolbar');
+    const viewResultBtn = document.getElementById('view-result-btn');
+    const backBtn = document.getElementById('back-btn');
+    const downloadPdfBtn = document.getElementById('download-pdf-btn');
+    const pdfContent = document.getElementById('pdf-content');
+
+    // 處理照片檔案讀取與即時顯示
+    function handlePhoto(input) {
+      const file = input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const slot = input.closest('.photo-slot');
+        const placeholder = slot.querySelector('.placeholder');
+        if (placeholder) placeholder.style.display = 'none';
+        
+        let img = slot.querySelector('img');
+        if (!img) { 
+          img = document.createElement('img'); 
+          slot.appendChild(img); 
+        }
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // 切換到預覽檢視：隱藏輸入框，代以靜態文字渲染
+    function switchToResultView() {
+      editToolbar.classList.add('hidden');
+      resultToolbar.classList.remove('hidden');
+      
+      const containers = pdfContent.querySelectorAll('.render-container');
+      containers.forEach(container => {
+        const input = container.querySelector('input, textarea');
+        if (input) {
+          // 移除舊的預覽文字（若存在）
+          const oldDiv = container.querySelector('.print-preview-text');
+          if (oldDiv) oldDiv.remove();
+
+          const val = input.value;
+          const textDiv = document.createElement('div');
+          textDiv.className = 'print-preview-text ';
+          
+          if (input.classList.contains('title-input')) {
+            textDiv.className += 'print-title';
+          } else if (input.classList.contains('field-input')) {
+            textDiv.className += 'print-text';
+            textDiv.style.minHeight = '29px';
+          } else if (input.classList.contains('desc-textarea')) {
+            textDiv.className += 'print-desc';
+            textDiv.style.whiteSpace = 'pre-wrap';
+          } else if (input.classList.contains('photo-desc')) {
+            textDiv.className += 'print-photo-desc';
+            textDiv.style.minHeight = '24px';
+          }
+          
+          textDiv.textContent = val || ' ';
+          input.style.display = 'none';
+          container.appendChild(textDiv);
+        }
+      });
+
+      // 預覽時，將沒上傳圖片的提示文字隱藏
+      const placeholders = pdfContent.querySelectorAll('.photo-slot .placeholder');
+      placeholders.forEach(p => { 
+        if (p.style.display !== 'none') p.style.opacity = '0'; 
+      });
+    }
+
+    // 返回編輯檢視：顯示回輸入框，移除靜態文字
+    function switchToEditView() {
+      editToolbar.classList.remove('hidden');
+      resultToolbar.classList.add('hidden');
+      
+      const containers = pdfContent.querySelectorAll('.render-container');
+      containers.forEach(container => {
+        const input = container.querySelector('input, textarea');
+        const printDiv = container.querySelector('.print-preview-text');
+        if (input) {
+          if (printDiv) printDiv.remove();
+          input.style.display = '';
+        }
+      });
+
+      const placeholders = pdfContent.querySelectorAll('.photo-slot .placeholder');
+      placeholders.forEach(p => { 
+        if (p.style.display !== 'none') p.style.opacity = '0.6'; 
+      });
+    }
+
+    viewResultBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      switchToResultView();
+    });
+
+    backBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      switchToEditView();
+    });
+
+    // 下載 PDF 主邏輯
+    downloadPdfBtn.addEventListener('click', async function(e) {
+      e.preventDefault();
+      const btn = this;
+      btn.disabled = true;
+      btn.style.opacity = '0.5';
+
+      const titleVal = document.getElementById('input-title').value.trim() || '活動照片成果表';
+
+      try {
+        // 利用 html2canvas 渲染整張 A4 容器
+        const canvas = await html2canvas(pdfContent, {
+          scale: 2, 
+          useCORS: true, 
+          allowTaint: true, 
+          backgroundColor: '#ffffff', 
+          logging: false
+        });
+        
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        
+        // 將畫布等比例貼到 A4 PDF 頁面上
+        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+        
+        pdf.save(titleVal + '.pdf');
+        showToast('PDF 已成功下載！', 'bg-green-600');
+      } catch(err) {
+        console.error('PDF 導出錯誤:', err);
+        showToast('PDF 輸出失敗，請重試', 'bg-red-600');
+      } finally {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+      }
+    });
+
+    function showToast(text, bgClass) {
+      const msg = document.createElement('div');
+      msg.textContent = text;
+      msg.className = 'fixed top-4 right-4 ' + bgClass + ' text-white px-5 py-3 rounded-lg shadow-lg z-50 font-medium transition-all duration-300';
+      document.body.appendChild(msg);
+      setTimeout(() => { msg.style.opacity = '0'; setTimeout(() => msg.remove(), 300); }, 3000);
+    }
+  </script>
+</body>
+</html>
