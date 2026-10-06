@@ -16,12 +16,12 @@
             theme: {
                 extend: {
                     colors: {
-                        pbDark: '#070a12',
-                        pbCard: '#131c2e',
+                        pbDark: '#0b0f19',
+                        pbCard: '#1e293b',
                         pbNeon: '#ccff00',
-                        pbCyan: '#00f0ff',
-                        pbAmber: '#ffb700',
-                        pbOrange: '#ff5500'
+                        pbCyan: '#06b6d4',
+                        pbAmber: '#f59e0b',
+                        pbRose: '#f43f5e'
                     }
                 }
             }
@@ -29,7 +29,6 @@
     </script>
 
     <style>
-        /* 鎖定頁面滑動與縮放 */
         html, body {
             touch-action: none;
             user-select: none;
@@ -38,38 +37,48 @@
             overflow: hidden;
             height: 100%;
             width: 100%;
-            background-color: #070a12;
+            background-color: #0b0f19;
             color: #f8fafc;
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
         }
 
-        /* 三個相同大小的卡牌外觀 */
+        /* 卡牌等高等寬與位移轉場動畫 */
         .equal-card {
-            box-shadow: 0 12px 35px -5px rgba(0, 0, 0, 0.7), 0 0 25px rgba(0, 0, 0, 0.4);
-            transition: transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.2s ease;
+            box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 0, 0, 0.3);
+            transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.3s ease, background-color 0.3s ease;
             will-change: transform;
             touch-action: none;
         }
 
-        /* 超巨型阿拉伯數字：幾乎填滿卡牌中央可用空間 */
-        .ultra-number {
+        /* 隊伍交換動畫特效 */
+        .card-swap-anim {
+            animation: swapGlow 0.4s ease-in-out;
+        }
+
+        @keyframes swapGlow {
+            0% { transform: scale(1); filter: brightness(1); }
+            50% { transform: scale(0.95); filter: brightness(1.3); }
+            100% { transform: scale(1); filter: brightness(1); }
+        }
+
+        /* 巨型阿拉伯數字字體：極致占比 */
+        .huge-number {
             font-size: clamp(7rem, 24vw, 17rem);
             line-height: 0.85;
             font-weight: 900;
             font-variant-numeric: tabular-nums;
-            letter-spacing: -0.04em;
         }
 
         .shadow-neon {
-            text-shadow: 0 0 35px rgba(204, 255, 0, 0.45);
+            text-shadow: 0 0 30px rgba(204, 255, 0, 0.4);
         }
 
         .shadow-cyan {
-            text-shadow: 0 0 35px rgba(0, 240, 255, 0.45);
+            text-shadow: 0 0 30px rgba(6, 182, 212, 0.4);
         }
 
         .shadow-amber {
-            text-shadow: 0 0 35px rgba(255, 183, 0, 0.45);
+            text-shadow: 0 0 30px rgba(245, 158, 11, 0.4);
         }
 
         /* Deuce 閃爍動畫 */
@@ -79,22 +88,21 @@
         }
         .deuce-banner {
             animation: deucePulse 1.5s infinite ease-in-out;
-            background: linear-gradient(90deg, #ff5500, #ffb700, #ff5500);
+            background: linear-gradient(90deg, #f97316, #eab308, #f97316);
             background-size: 200% 100%;
         }
 
         .glass-panel {
-            background: rgba(19, 28, 46, 0.75);
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
     </style>
 </head>
-<body class="flex flex-col h-screen w-screen justify-between p-2 sm:p-4 select-none relative overflow-hidden">
+<body class="flex flex-col h-screen w-screen justify-between p-3 sm:p-5 select-none relative">
 
-    <!-- 頂部資訊欄與狀態提示 -->
-    <header class="w-full flex flex-col items-center z-10 space-y-1.5 shrink-0">
+    <header class="w-full flex flex-col items-center z-10 space-y-2">
         <div class="w-full max-w-6xl flex items-center justify-between px-1">
             <!-- LOGO 與作者標題 -->
             <div class="flex items-center space-x-2">
@@ -106,7 +114,7 @@
                 </h1>
             </div>
 
-            <!-- 右側控制按鈕組 (僅留音效切換與新一局) -->
+            <!-- 右側控制按鈕組 -->
             <div class="flex items-center space-x-2">
                 <!-- 音效按鈕 -->
                 <button id="soundToggleBtn" onclick="toggleSound()" class="glass-panel p-2.5 rounded-xl hover:bg-slate-700/50 active:scale-95 transition text-slate-300 hover:text-pbNeon" title="開關音效">
@@ -120,85 +128,94 @@
             </div>
         </div>
 
-        <!-- 頂部提示條 / Deuce 狀態 -->
-        <div id="statusBanner" class="w-full max-w-6xl min-h-[28px] flex items-center justify-center">
-            <div id="deuceBadge" class="hidden deuce-banner text-slate-950 font-black px-5 py-0.5 rounded-full text-xs sm:text-sm tracking-widest uppercase shadow-lg shadow-orange-500/20">
+        <!-- 頂部提示條 / 呼叫比數提示 (Server-Score-Receiver-Score-Server#) -->
+        <div id="statusBanner" class="w-full max-w-6xl min-h-[32px] flex items-center justify-center">
+            <div id="deuceBadge" class="hidden deuce-banner text-slate-950 font-black px-5 py-1 rounded-full text-xs sm:text-sm tracking-widest uppercase shadow-lg shadow-orange-500/20">
                 <i class="fa-solid fa-fire mr-1"></i> DEUCE 平分戰（需領先 2 分獲勝）
             </div>
-            <div id="gameNoticeBadge" class="glass-panel text-slate-300 font-medium px-4 py-0.5 rounded-full text-[11px] sm:text-xs tracking-wider border border-slate-700/50 flex items-center gap-2">
-                <span><i class="fa-solid fa-arrows-up-down text-pbNeon mr-1"></i>左中卡上下滑動記分</span>
+            <div id="gameNoticeBadge" class="glass-panel text-slate-300 font-medium px-4 py-1 rounded-full text-xs tracking-wider border border-slate-700/50 flex items-center gap-2">
+                <span class="text-pbNeon font-bold flex items-center gap-1">
+                    <i class="fa-solid fa-bullhorn"></i> 比數呼叫: <span id="calloutText" class="underline tracking-widest text-white ml-1">0 - 0 - 2</span>
+                </span>
                 <span class="text-slate-600">|</span>
-                <span><i class="fa-solid fa-hand-pointer text-pbAmber mr-1"></i>右卡點擊切換發球位</span>
+                <span class="text-slate-400">左卡發球方得分，右卡換位</span>
             </div>
         </div>
     </header>
 
-    <!-- 主要記分板區域：三個尺寸完全相同的卡牌並立 (隊伍1 | 隊伍2 | 發球位) -->
-    <main class="w-full max-w-6xl my-auto flex-1 flex items-center justify-center py-1">
-        <div class="grid grid-cols-3 gap-2.5 sm:gap-5 w-full h-[76vh] max-h-[680px] min-h-[380px]">
+    <main class="w-full max-w-6xl my-auto flex-1 flex items-center justify-center py-2">
+        <div class="grid grid-cols-3 gap-3 sm:gap-6 w-full h-[68vh] max-h-[600px] min-h-[380px]">
             
-            <!-- 牌卡 1（左）：隊伍 1 分數 -->
-            <div id="card1" class="equal-card bg-slate-900/90 rounded-2xl sm:rounded-3xl border-2 border-pbNeon/40 flex flex-col justify-between p-2.5 sm:p-4 relative overflow-hidden select-none cursor-grab active:cursor-grabbing">
-                <!-- 隊名頂部區 -->
-                <div class="w-full flex items-center justify-between z-10 shrink-0">
-                    <button onclick="editTeamName(1)" class="group flex items-center gap-1 text-slate-300 hover:text-white font-bold text-xs sm:text-base transition truncate max-w-[85%]">
-                        <span id="team1Name" class="truncate">隊伍 1</span>
-                        <i class="fa-solid fa-pen text-[10px] opacity-0 group-hover:opacity-100 text-pbNeon transition"></i>
-                    </button>
-                    <span class="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-pbNeon/10 text-pbNeon border border-pbNeon/30">TEAM 1</span>
+            <!-- 牌卡 1（左）：固定為「發球方 Serving Team」 -->
+            <div id="cardServing" class="equal-card bg-slate-800/90 rounded-2xl sm:rounded-3xl border-2 border-pbNeon/60 flex flex-col justify-between p-3 sm:p-5 relative overflow-hidden select-none cursor-grab active:cursor-grabbing">
+                <!-- 頂部區 -->
+                <div class="w-full flex items-center justify-between z-10">
+                    <div class="flex flex-col">
+                        <span class="text-[10px] font-extrabold text-pbNeon tracking-widest flex items-center gap-1">
+                            <i class="fa-solid fa-table-tennis-paddle-ball text-xs animate-pulse"></i> 發球方 SERVING
+                        </span>
+                        <button onclick="editServingTeamName()" class="group flex items-center gap-1.5 text-slate-200 hover:text-white font-black text-sm sm:text-lg transition truncate max-w-[120px] sm:max-w-[180px]">
+                            <span id="servingTeamName" class="truncate">隊伍 1</span>
+                            <i class="fa-solid fa-pen text-xs opacity-0 group-hover:opacity-100 text-pbNeon transition"></i>
+                        </button>
+                    </div>
+                    <span id="servingTeamBadge" class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-pbNeon/20 text-pbNeon border border-pbNeon/40">T1</span>
                 </div>
 
-                <!-- 中央巨型數字 (占據最大視覺空間) -->
-                <div class="flex-1 flex items-center justify-center my-auto overflow-hidden">
-                    <span id="score1" class="ultra-number text-pbNeon shadow-neon">0</span>
-                </div>
-
-                <!-- 底部手勢提示 -->
-                <div class="w-full flex justify-between items-center text-[9px] sm:text-xs text-slate-400 font-medium pointer-events-none border-t border-slate-800/80 pt-1.5 shrink-0">
-                    <span class="flex items-center"><i class="fa-solid fa-arrow-up mr-1 text-pbNeon"></i>上滑 +1</span>
-                    <span class="flex items-center"><i class="fa-solid fa-arrow-down mr-1 text-red-400"></i>下滑 -1</span>
-                </div>
-            </div>
-
-            <!-- 牌卡 2（中間）：隊伍 2 分數 -->
-            <div id="card2" class="equal-card bg-slate-900/90 rounded-2xl sm:rounded-3xl border-2 border-pbCyan/40 flex flex-col justify-between p-2.5 sm:p-4 relative overflow-hidden select-none cursor-grab active:cursor-grabbing">
-                <!-- 隊名頂部區 -->
-                <div class="w-full flex items-center justify-between z-10 shrink-0">
-                    <button onclick="editTeamName(2)" class="group flex items-center gap-1 text-slate-300 hover:text-white font-bold text-xs sm:text-base transition truncate max-w-[85%]">
-                        <span id="team2Name" class="truncate">隊伍 2</span>
-                        <i class="fa-solid fa-pen text-[10px] opacity-0 group-hover:opacity-100 text-pbCyan transition"></i>
-                    </button>
-                    <span class="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-pbCyan/10 text-pbCyan border border-pbCyan/30">TEAM 2</span>
-                </div>
-
-                <!-- 中央巨型數字 (占據最大視覺空間) -->
-                <div class="flex-1 flex items-center justify-center my-auto overflow-hidden">
-                    <span id="score2" class="ultra-number text-pbCyan shadow-cyan">0</span>
+                <!-- 中央巨型數字 -->
+                <div class="flex-1 flex items-center justify-center my-auto">
+                    <span id="servingScore" class="huge-number text-pbNeon shadow-neon">0</span>
                 </div>
 
                 <!-- 底部手勢提示 -->
-                <div class="w-full flex justify-between items-center text-[9px] sm:text-xs text-slate-400 font-medium pointer-events-none border-t border-slate-800/80 pt-1.5 shrink-0">
-                    <span class="flex items-center"><i class="fa-solid fa-arrow-up mr-1 text-pbCyan"></i>上滑 +1</span>
-                    <span class="flex items-center"><i class="fa-solid fa-arrow-down mr-1 text-red-400"></i>下滑 -1</span>
+                <div class="w-full flex justify-between items-center text-[10px] sm:text-xs text-slate-400 font-medium pointer-events-none border-t border-slate-700/50 pt-2">
+                    <span class="flex items-center text-pbNeon font-bold"><i class="fa-solid fa-arrow-up mr-1"></i>上滑 +1 分</span>
+                    <span class="flex items-center text-red-400"><i class="fa-solid fa-arrow-down mr-1"></i>下滑 -1</span>
                 </div>
             </div>
 
-            <!-- 牌卡 3（右邊）：發球位狀態 1 / 2 （預設啟動為 2） -->
-            <div id="card3" class="equal-card bg-slate-900/90 rounded-2xl sm:rounded-3xl border-2 border-pbAmber/50 flex flex-col justify-between p-2.5 sm:p-4 relative overflow-hidden select-none cursor-pointer transition active:scale-95 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950">
+            <!-- 牌卡 2（中間）：固定為「接發球方 Receiving Team」 -->
+            <div id="cardReceiving" class="equal-card bg-slate-800/90 rounded-2xl sm:rounded-3xl border-2 border-pbCyan/40 flex flex-col justify-between p-3 sm:p-5 relative overflow-hidden select-none cursor-grab active:cursor-grabbing">
+                <!-- 頂部區 -->
+                <div class="w-full flex items-center justify-between z-10">
+                    <div class="flex flex-col">
+                        <span class="text-[10px] font-extrabold text-pbCyan tracking-widest">接發球 RECEIVING</span>
+                        <button onclick="editReceivingTeamName()" class="group flex items-center gap-1.5 text-slate-200 hover:text-white font-black text-sm sm:text-lg transition truncate max-w-[120px] sm:max-w-[180px]">
+                            <span id="receivingTeamName" class="truncate">隊伍 2</span>
+                            <i class="fa-solid fa-pen text-xs opacity-0 group-hover:opacity-100 text-pbCyan transition"></i>
+                        </button>
+                    </div>
+                    <span id="receivingTeamBadge" class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-pbCyan/20 text-pbCyan border border-pbCyan/40">T2</span>
+                </div>
+
+                <!-- 中央巨型數字 -->
+                <div class="flex-1 flex items-center justify-center my-auto">
+                    <span id="receivingScore" class="huge-number text-pbCyan shadow-cyan">0</span>
+                </div>
+
+                <!-- 底部提示 -->
+                <div class="w-full flex justify-between items-center text-[10px] sm:text-xs text-slate-400 font-medium pointer-events-none border-t border-slate-700/50 pt-2">
+                    <span class="flex items-center text-slate-500"><i class="fa-solid fa-lock mr-1"></i>側邊制不加分</span>
+                    <span class="flex items-center text-red-400"><i class="fa-solid fa-arrow-down mr-1"></i>下滑 -1</span>
+                </div>
+            </div>
+
+            <!-- 牌卡 3（右邊）：發球位 1 / 2 （點擊觸發 Side-Out 換位） -->
+            <div id="cardServerState" class="equal-card bg-slate-800/90 rounded-2xl sm:rounded-3xl border-2 border-pbAmber/50 flex flex-col justify-between p-3 sm:p-5 relative overflow-hidden select-none cursor-pointer transition active:scale-95 bg-gradient-to-b from-slate-800 via-slate-800 to-slate-900">
                 <!-- 發球位標題頂部區 -->
-                <div class="w-full flex items-center justify-between z-10 shrink-0">
+                <div class="w-full flex items-center justify-between z-10">
                     <span class="text-xs sm:text-base font-black tracking-wider text-pbAmber uppercase">發球位</span>
-                    <span class="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-pbAmber/10 text-pbAmber border border-pbAmber/30">SERVER</span>
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pbAmber/10 text-pbAmber border border-pbAmber/30">SERVER</span>
                 </div>
 
                 <!-- 中央巨型數字 (預設顯現為 2) -->
-                <div class="flex-1 flex items-center justify-center my-auto overflow-hidden">
-                    <span id="serverStateDigit" class="ultra-number text-pbAmber shadow-amber">2</span>
+                <div class="flex-1 flex flex-col items-center justify-center my-auto">
+                    <span id="serverStateDigit" class="huge-number text-pbAmber shadow-amber">2</span>
                 </div>
 
                 <!-- 底部切換提示 -->
-                <div class="w-full flex justify-center items-center text-[9px] sm:text-xs text-pbAmber font-bold pointer-events-none border-t border-slate-800/80 pt-1.5 shrink-0">
-                    <i class="fa-solid fa-hand-pointer mr-1"></i> 觸碰切換 1 / 2
+                <div class="w-full flex justify-center items-center text-[10px] sm:text-xs text-pbAmber font-bold pointer-events-none border-t border-slate-700/50 pt-2">
+                    <i class="fa-solid fa-hand-pointer mr-1"></i> 點擊 2 ➔ 1 換球權
                 </div>
             </div>
 
@@ -206,9 +223,9 @@
     </main>
 
     <!-- 頁尾規則說明 -->
-    <footer class="w-full max-w-6xl mx-auto flex items-center justify-center px-2 py-0.5 shrink-0">
-        <div class="text-[11px] text-slate-400 font-medium flex items-center gap-2">
-            <span>勝負規則: <strong class="text-slate-200">11 分賽 (需領先 2 分以上)</strong></span>
+    <footer class="w-full max-w-6xl mx-auto flex items-center justify-center px-2 pt-1 pb-1">
+        <div class="text-xs text-slate-400 font-medium flex items-center gap-2">
+            <span>規則: <strong class="text-slate-200">Side-Out 側邊得分制 (11 分且需領先 2 分)</strong></span>
         </div>
     </footer>
 
@@ -245,7 +262,7 @@
                 <i class="fa-solid fa-arrow-rotate-right"></i>
             </div>
             <h3 class="text-lg font-bold text-white mb-2">確定開始新一局？</h3>
-            <p class="text-xs text-slate-400 mb-5">這將會清除當前比數，發球位回到 2。</p>
+            <p class="text-xs text-slate-400 mb-5">將會重置分數為 0-0-2，發球權回到隊伍 1。</p>
             <div class="flex gap-2">
                 <button onclick="closeResetModal()" class="flex-1 py-2.5 rounded-xl font-bold text-xs text-slate-400 glass-panel hover:bg-slate-700/50">取消</button>
                 <button onclick="resetMatch(); closeResetModal();" class="flex-1 py-2.5 rounded-xl font-bold text-xs text-slate-950 bg-pbNeon hover:bg-lime-300 shadow-lg shadow-pbNeon/20">開始新局</button>
@@ -253,14 +270,20 @@
         </div>
     </div>
 
+    <!-- 訊息提示 Toast -->
+    <div id="toast" class="fixed bottom-12 left-1/2 -translate-x-1/2 glass-panel px-4 py-2 rounded-full text-xs font-bold text-pbRose border border-pbRose/40 opacity-0 pointer-events-none transition-all duration-300 z-50 flex items-center gap-2">
+        <i class="fa-solid fa-circle-exclamation"></i>
+        <span id="toastMsg">訊息內容</span>
+    </div>
+
     <script>
-        // 比賽狀態管理（預設發球位 serverState 為 2）
+        // 核心狀態管理 (維持兩隊原始身分，並追蹤誰是現任發球隊伍)
         const gameState = {
-            score1: 0,
-            score2: 0,
-            serverState: 2, // 預設發球位為 2
-            team1Name: '隊伍 1',
-            team2Name: '隊伍 2',
+            team1: { name: '隊伍 1', score: 0, badge: 'T1' },
+            team2: { name: '隊伍 2', score: 0, badge: 'T2' },
+            servingTeamId: 1, // 當前擁有發球權的隊伍 ID (1 或 2)
+            serverState: 2,   // 發球位 1 或 2 (局初為 2)
+            isFirstServiceOfGame: true, // 局初開局標記 (只有發球員 2)
             isGameOver: false,
             soundEnabled: true
         };
@@ -312,13 +335,22 @@
                     gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
                     osc.start(now);
                     osc.stop(now + 0.08);
+                } else if (type === 'sideout') {
+                    // 換球權雙音特效
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(350, now);
+                    osc.frequency.setValueAtTime(520, now + 0.08);
+                    gain.gain.setValueAtTime(0.12, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                    osc.start(now);
+                    osc.stop(now + 0.2);
                 } else if (type === 'win') {
                     const notes = [523.25, 659.25, 783.99, 1046.50];
                     notes.forEach((freq, idx) => {
                         const noteOsc = audioCtx.createOscillator();
                         const noteGain = audioCtx.createGain();
                         noteOsc.connect(noteGain);
-                        noteOsc.connect(audioCtx.destination);
+                        noteGain.connect(audioCtx.destination);
                         
                         noteOsc.type = 'triangle';
                         noteOsc.frequency.setValueAtTime(freq, now + idx * 0.1);
@@ -345,16 +377,12 @@
             }
         }
 
-        /**
-         * 滑動手勢（Swipe）綁定函數
-         */
         function setupSwipeGestures(cardElement, onSwipeUp, onSwipeDown) {
             let startY = 0;
             let currentY = 0;
             let isDragging = false;
-            const threshold = 35; // 滑動臨界值
+            const threshold = 35;
 
-            // Touch 手機觸控
             cardElement.addEventListener('touchstart', (e) => {
                 if (gameState.isGameOver) return;
                 startY = e.touches[0].clientY;
@@ -377,7 +405,6 @@
                 handleDragEnd();
             });
 
-            // Mouse 電腦滑鼠拖曳測試
             cardElement.addEventListener('mousedown', (e) => {
                 if (gameState.isGameOver) return;
                 startY = e.clientY;
@@ -413,50 +440,91 @@
             }
         }
 
-        function changeScore1(delta) {
+        // 左卡（發球方）分數增加
+        function changeServingScore(delta) {
             if (gameState.isGameOver) return;
-            const newScore = Math.max(0, gameState.score1 + delta);
-            if (newScore !== gameState.score1) {
-                gameState.score1 = newScore;
+            const servingTeam = gameState.servingTeamId === 1 ? gameState.team1 : gameState.team2;
+            const newScore = Math.max(0, servingTeam.score + delta);
+            if (newScore !== servingTeam.score) {
+                servingTeam.score = newScore;
                 playSound(delta > 0 ? 'add' : 'subtract');
                 updateUI();
                 checkGameRules();
             }
         }
 
-        function changeScore2(delta) {
+        // 中卡（接發球方）分數操作
+        function handleReceivingSwipe(delta) {
             if (gameState.isGameOver) return;
-            const newScore = Math.max(0, gameState.score2 + delta);
-            if (newScore !== gameState.score2) {
-                gameState.score2 = newScore;
-                playSound(delta > 0 ? 'add' : 'subtract');
-                updateUI();
-                checkGameRules();
+            const receivingTeam = gameState.servingTeamId === 1 ? gameState.team2 : gameState.team1;
+            
+            if (delta > 0) {
+                // 側邊球權制提醒
+                showToast("匹克球側邊制：僅【發球方】能得分！");
+            } else if (delta < 0) {
+                // 扣回接發球方誤記之比分
+                if (receivingTeam.score > 0) {
+                    receivingTeam.score--;
+                    playSound('subtract');
+                    updateUI();
+                }
             }
         }
 
+        // 右卡（發球位點擊）：切換 1 ↔ 2 與觸發 Side-Out 換位
         function toggleServerState() {
             if (gameState.isGameOver) return;
-            const nextState = gameState.serverState === 1 ? 2 : 1;
-            gameState.serverState = nextState;
-            
-            playSound('toggle');
-            
-            const card3 = document.getElementById('card3');
-            card3.style.transform = 'scale(0.93)';
-            setTimeout(() => card3.style.transform = 'scale(1)', 120);
+
+            const card1 = document.getElementById('cardServing');
+            const card2 = document.getElementById('cardReceiving');
+
+            if (gameState.isFirstServiceOfGame) {
+                // 開局第一次 Side-Out 直接換球權給隊伍 2
+                gameState.isFirstServiceOfGame = false;
+                gameState.servingTeamId = 2;
+                gameState.serverState = 1;
+                playSound('sideout');
+                triggerCardSwapAnim(card1, card2);
+            } else if (gameState.serverState === 2) {
+                // 發球員 2 失敗 ➔ 轉為發球員 1 (Side-Out 換球權給另一隊)
+                gameState.serverState = 1;
+                gameState.servingTeamId = gameState.servingTeamId === 1 ? 2 : 1;
+                playSound('sideout');
+                triggerCardSwapAnim(card1, card2);
+            } else {
+                // 發球員 1 失敗 ➔ 轉為發球員 2 (同一隊換第二位發球員)
+                gameState.serverState = 2;
+                playSound('toggle');
+            }
 
             updateUI();
         }
 
-        // 規則判斷 (11分賽，勝者需領先2分以上)
+        function triggerCardSwapAnim(c1, c2) {
+            c1.classList.add('card-swap-anim');
+            c2.classList.add('card-swap-anim');
+            setTimeout(() => {
+                c1.classList.remove('card-swap-anim');
+                c2.classList.remove('card-swap-anim');
+            }, 400);
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 2000);
+        }
+
         function checkGameRules() {
-            const s1 = gameState.score1;
-            const s2 = gameState.score2;
+            const s1 = gameState.team1.score;
+            const s2 = gameState.team2.score;
 
             if ((s1 >= 11 || s2 >= 11) && Math.abs(s1 - s2) >= 2) {
                 gameState.isGameOver = true;
-                const winner = s1 > s2 ? gameState.team1Name : gameState.team2Name;
+                const winner = s1 > s2 ? gameState.team1.name : gameState.team2.name;
                 triggerVictory(winner, `${s1} : ${s2}`);
             }
         }
@@ -474,10 +542,10 @@
             winCard.classList.add('scale-100');
 
             if (typeof confetti === 'function') {
-                confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+                confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
                 setTimeout(() => {
-                    confetti({ particleCount: 50, angle: 60, spread: 55, origin: { x: 0 } });
-                    confetti({ particleCount: 50, angle: 120, spread: 55, origin: { x: 1 } });
+                    confetti({ particleCount: 60, angle: 60, spread: 55, origin: { x: 0 } });
+                    confetti({ particleCount: 60, angle: 120, spread: 55, origin: { x: 1 } });
                 }, 250);
             }
         }
@@ -491,12 +559,27 @@
         }
 
         function updateUI() {
-            document.getElementById('score1').innerText = gameState.score1;
-            document.getElementById('score2').innerText = gameState.score2;
+            const servingTeam = gameState.servingTeamId === 1 ? gameState.team1 : gameState.team2;
+            const receivingTeam = gameState.servingTeamId === 1 ? gameState.team2 : gameState.team1;
+
+            // 渲染左卡 (Serving)
+            document.getElementById('servingTeamName').innerText = servingTeam.name;
+            document.getElementById('servingTeamBadge').innerText = servingTeam.badge;
+            document.getElementById('servingScore').innerText = servingTeam.score;
+
+            // 渲染中卡 (Receiving)
+            document.getElementById('receivingTeamName').innerText = receivingTeam.name;
+            document.getElementById('receivingTeamBadge').innerText = receivingTeam.badge;
+            document.getElementById('receivingScore').innerText = receivingTeam.score;
+
+            // 渲染右卡 (Server State)
             document.getElementById('serverStateDigit').innerText = gameState.serverState;
 
+            // 呼叫口號 (ServerScore - ReceiverScore - Server#)
+            document.getElementById('calloutText').innerText = `${servingTeam.score} - ${receivingTeam.score} - ${gameState.serverState}`;
+
             // Deuce 判斷 (雙方均 >= 10 分且差距未達 2 分)
-            const isDeuce = (gameState.score1 >= 10 && gameState.score2 >= 10 && Math.abs(gameState.score1 - gameState.score2) < 2);
+            const isDeuce = (gameState.team1.score >= 10 && gameState.team2.score >= 10 && Math.abs(gameState.team1.score - gameState.team2.score) < 2);
             const deuceBadge = document.getElementById('deuceBadge');
             const gameNoticeBadge = document.getElementById('gameNoticeBadge');
 
@@ -507,17 +590,22 @@
                 deuceBadge.classList.add('hidden');
                 gameNoticeBadge.classList.remove('hidden');
             }
-
-            document.getElementById('team1Name').innerText = gameState.team1Name;
-            document.getElementById('team2Name').innerText = gameState.team2Name;
         }
 
-        function editTeamName(teamNumber) {
-            const currentName = teamNumber === 1 ? gameState.team1Name : gameState.team2Name;
-            const newName = prompt(`請輸入隊伍 ${teamNumber} 的名稱:`, currentName);
+        function editServingTeamName() {
+            const servingTeam = gameState.servingTeamId === 1 ? gameState.team1 : gameState.team2;
+            const newName = prompt(`請輸入 ${servingTeam.name} 的新名稱:`, servingTeam.name);
             if (newName && newName.trim() !== "") {
-                if (teamNumber === 1) gameState.team1Name = newName.trim();
-                else gameState.team2Name = newName.trim();
+                servingTeam.name = newName.trim();
+                updateUI();
+            }
+        }
+
+        function editReceivingTeamName() {
+            const receivingTeam = gameState.servingTeamId === 1 ? gameState.team2 : gameState.team1;
+            const newName = prompt(`請輸入 ${receivingTeam.name} 的新名稱:`, receivingTeam.name);
+            if (newName && newName.trim() !== "") {
+                receivingTeam.name = newName.trim();
                 updateUI();
             }
         }
@@ -531,31 +619,33 @@
         }
 
         function resetMatch() {
-            gameState.score1 = 0;
-            gameState.score2 = 0;
-            gameState.serverState = 2; // 開啟新一局預設發球位亦回到 2
+            gameState.team1.score = 0;
+            gameState.team2.score = 0;
+            gameState.servingTeamId = 1;
+            gameState.serverState = 2;
+            gameState.isFirstServiceOfGame = true;
             gameState.isGameOver = false;
             playSound('toggle');
             updateUI();
         }
 
         window.onload = function() {
-            // 綁定左卡 (隊伍1) Swipe
+            // 綁定左卡 (Serving) Swipe
             setupSwipeGestures(
-                document.getElementById('card1'),
-                () => changeScore1(1),
-                () => changeScore1(-1)
+                document.getElementById('cardServing'),
+                () => changeServingScore(1),
+                () => changeServingScore(-1)
             );
 
-            // 綁定中卡 (隊伍2) Swipe
+            // 綁定中卡 (Receiving) Swipe
             setupSwipeGestures(
-                document.getElementById('card2'),
-                () => changeScore2(1),
-                () => changeScore2(-1)
+                document.getElementById('cardReceiving'),
+                () => handleReceivingSwipe(1),
+                () => handleReceivingSwipe(-1)
             );
 
-            // 綁定右卡 (發球位) Click
-            document.getElementById('card3').addEventListener('click', () => {
+            // 綁定右卡 (ServerState) Click
+            document.getElementById('cardServerState').addEventListener('click', () => {
                 toggleServerState();
             });
 
