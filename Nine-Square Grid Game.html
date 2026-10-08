@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>九宮格 / 十六宮格 題目連線競賽</title>
+    <!-- Tailwind CSS for UI Layout -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti for Victory Animation -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700;900&display=swap');
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+            min-height: 100vh;
+            color: #f8fafc;
+        }
+
+        /* Glassmorphism effects */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Grid Tile Styles & Hover Effects */
+        .grid-tile {
+            position: relative;
+            aspect-ratio: 1 / 1;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            perspective: 1000px;
+        }
+
+        .grid-tile:hover {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 12px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Winning Tile Glow Animation */
+        @keyframes pulse-glow-o {
+            0%, 100% { box-shadow: 0 0 20px 5px rgba(59, 130, 246, 0.8), inset 0 0 15px rgba(59, 130, 246, 0.6); }
+            50% { box-shadow: 0 0 35px 10px rgba(96, 165, 250, 0.9), inset 0 0 25px rgba(96, 165, 250, 0.8); }
+        }
+
+        @keyframes pulse-glow-x {
+            0%, 100% { box-shadow: 0 0 20px 5px rgba(239, 68, 68, 0.8), inset 0 0 15px rgba(239, 68, 68, 0.6); }
+            50% { box-shadow: 0 0 35px 10px rgba(248, 113, 113, 0.9), inset 0 0 25px rgba(248, 113, 113, 0.8); }
+        }
+
+        .tile-win-o {
+            animation: pulse-glow-o 1.5s infinite;
+            border-color: #60a5fa !important;
+            z-index: 20;
+        }
+
+        .tile-win-x {
+            animation: pulse-glow-x 1.5s infinite;
+            border-color: #f87171 !important;
+            z-index: 20;
+        }
+
+        /* Player Turn Indicators */
+        .player-active-o {
+            border-color: #3b82f6;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+            background: rgba(59, 130, 246, 0.15);
+        }
+
+        .player-active-x {
+            border-color: #ef4444;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+            background: rgba(239, 68, 68, 0.15);
+        }
+
+        /* Modal Overlay Transition */
+        .modal-enter {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+        .modal-enter-active {
+            opacity: 1;
+            transform: scale(1);
+            transition: opacity 0.2s, transform 0.2s;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+    <!-- Header Controls & Status -->
+    <header class="glass-panel sticky top-0 z-30 border-b border-slate-700/50 px-4 py-3 shadow-xl">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+            
+            <!-- Title -->
+            <div class="flex items-center space-x-3">
+                <div class="bg-gradient-to-tr from-blue-600 to-indigo-500 p-2.5 rounded-xl shadow-lg shadow-indigo-500/30">
+                    <i class="fa-solid fa-trophy text-2xl text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl md:text-2xl font-black tracking-wide bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400">
+                        宮格題目連線競賽
+                    </h1>
+                    <p class="text-xs text-slate-400">自訂題庫 × 雙隊競賽對決</p>
+                </div>
+            </div>
+
+            <!-- Mode Selector (3x3 vs 4x4) -->
+            <div class="flex items-center bg-slate-900/80 p-1 rounded-xl border border-slate-700">
+                <button id="btn-mode-3" onclick="switchGridSize(3)" class="px-4 py-1.5 rounded-lg text-sm font-bold transition-all duration-200 flex items-center gap-1.5 bg-indigo-600 text-white shadow-md">
+                    <i class="fa-solid fa-table-cells-large"></i> 3 × 3 (九宮格)
+                </button>
+                <button id="btn-mode-4" onclick="switchGridSize(4)" class="px-4 py-1.5 rounded-lg text-sm font-bold transition-all duration-200 flex items-center gap-1.5 text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-border-all"></i> 4 × 4 (十六宮格)
+                </button>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center space-x-2">
+                <label for="batch-file-input" class="cursor-pointer bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 px-3.5 py-1.5 rounded-xl text-sm font-medium transition flex items-center gap-2 shadow">
+                    <i class="fa-solid fa-folder-open text-indigo-400"></i>
+                    <span class="hidden sm:inline">批次匯入題目圖片</span>
+                </label>
+                <input type="file" id="batch-file-input" multiple accept="image/*" class="hidden" onchange="handleBatchUpload(event)">
+
+                <button onclick="resetBoardState()" class="bg-amber-600/80 hover:bg-amber-500 text-white px-3.5 py-1.5 rounded-xl text-sm font-medium transition flex items-center gap-1.5 shadow">
+                    <i class="fa-solid fa-rotate"></i>
+                    <span class="hidden sm:inline">重置對局</span>
+                </button>
+
+                <button onclick="resetAllImages()" class="bg-rose-900/40 hover:bg-rose-800/60 text-rose-200 border border-rose-700/50 px-3.5 py-1.5 rounded-xl text-sm font-medium transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-trash-can"></i>
+                    <span class="hidden sm:inline">重設圖片</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow max-w-7xl w-full mx-auto p-4 md:p-6 flex flex-col items-center justify-start gap-6">
+        
+        <!-- Scoreboard / Teams Banner -->
+        <section class="w-full grid grid-cols-2 md:grid-cols-3 gap-4 items-center">
+            
+            <!-- Player O Card -->
+            <div id="player-card-O" class="glass-panel p-4 rounded-2xl border-2 transition-all duration-300 flex items-center justify-between player-active-o">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-400 flex items-center justify-center text-blue-400 font-black text-2xl">
+                        O
+                    </div>
+                    <div>
+                        <input type="text" id="name-O" value="O隊（藍隊）" onchange="updateTeamNames()" class="bg-transparent text-slate-100 font-bold text-base focus:outline-none border-b border-transparent focus:border-blue-400 w-24 sm:w-32">
+                        <p class="text-xs text-blue-300/80 font-medium">目前的標記回合</p>
+                    </div>
+                </div>
+                <div id="badge-turn-O" class="bg-blue-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-lg shadow-blue-500/40">
+                    目前回合
+                </div>
+            </div>
+
+            <!-- Current Game Status / Turn Info -->
+            <div class="hidden md:flex flex-col items-center justify-center glass-panel p-3 rounded-2xl text-center">
+                <span class="text-xs text-slate-400 font-semibold uppercase tracking-wider">連線獲勝目標</span>
+                <span id="win-condition-text" class="text-lg font-black text-amber-400 mt-0.5">任一方向連成 3 格</span>
+                <div id="status-message" class="text-xs text-slate-300 mt-1">點擊任意題目開始答題標記</div>
+            </div>
+
+            <!-- Player X Card -->
+            <div id="player-card-X" class="glass-panel p-4 rounded-2xl border-2 border-slate-700/60 transition-all duration-300 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-red-500/20 border border-red-400 flex items-center justify-center text-red-400 font-black text-2xl">
+                        X
+                    </div>
+                    <div>
+                        <input type="text" id="name-X" value="X隊（紅隊）" onchange="updateTeamNames()" class="bg-transparent text-slate-100 font-bold text-base focus:outline-none border-b border-transparent focus:border-red-400 w-24 sm:w-32">
+                        <p class="text-xs text-red-300/80 font-medium">等待下棋</p>
+                    </div>
+                </div>
+                <div id="badge-turn-X" class="hidden bg-red-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-lg shadow-red-500/40">
+                    目前回合
+                </div>
+            </div>
+        </section>
+
+        <!-- Grid Board Container -->
+        <section class="w-full max-w-4xl flex justify-center items-center my-auto">
+            <div id="grid-container" class="grid gap-3 md:gap-4 w-full p-4 glass-panel rounded-3xl shadow-2xl transition-all duration-300">
+                <!-- Grid Tiles will be populated dynamically -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Hidden Single-Tile File Input -->
+    <input type="file" id="single-file-input" accept="image/*" class="hidden" onchange="handleSingleUpload(event)">
+
+    <!-- Tile Action & Preview Modal -->
+    <div id="tile-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-panel bg-slate-900 border border-slate-700 rounded-3xl max-w-lg w-full p-6 shadow-2xl flex flex-col gap-4 transform transition-all">
+            
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 id="modal-tile-title" class="text-lg font-bold text-slate-200 flex items-center gap-2">
+                    <i class="fa-solid fa-circle-question text-indigo-400"></i>
+                    題目詳情 #<span id="modal-tile-index">1</span>
+                </h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Image Big Preview -->
+            <div class="relative w-full aspect-square bg-slate-950/80 rounded-2xl overflow-hidden border border-slate-800 flex items-center justify-center shadow-inner">
+                <img id="modal-image-preview" src="" alt="題目圖片" class="max-w-full max-h-full object-contain">
+            </div>
+
+            <!-- Single Image Replace & Option buttons -->
+            <div class="flex items-center justify-between pt-2">
+                <button onclick="triggerSingleUpload()" class="text-xs bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-indigo-500/30 px-3 py-2 rounded-xl transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-image"></i> 更換此格圖片
+                </button>
+                <span class="text-xs text-slate-400">標記隊伍佔領：</span>
+            </div>
+
+            <!-- Mark Action Buttons -->
+            <div class="grid grid-cols-3 gap-3">
+                <button onclick="markTileFromModal('O')" class="bg-blue-600/30 hover:bg-blue-600 border border-blue-500 text-blue-200 hover:text-white py-3 rounded-xl font-bold transition flex items-center justify-center gap-2 shadow-lg">
+                    <i class="fa-solid fa-circle text-lg"></i> 標記 O隊
+                </button>
+                <button onclick="markTileFromModal('X')" class="bg-red-600/30 hover:bg-red-600 border border-red-500 text-red-200 hover:text-white py-3 rounded-xl font-bold transition flex items-center justify-center gap-2 shadow-lg">
+                    <i class="fa-solid fa-xmark text-xl"></i> 標記 X隊
+                </button>
+                <button onclick="markTileFromModal(null)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 py-3 rounded-xl font-medium transition flex items-center justify-center gap-1">
+                    <i class="fa-solid fa-eraser"></i> 清除標記
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Winner Announcement Banner Modal -->
+    <div id="winner-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-lg z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-panel bg-slate-900 border-2 border-amber-500/40 rounded-3xl max-w-md w-full p-8 shadow-2xl text-center flex flex-col items-center gap-5">
+            <div class="w-20 h-20 bg-gradient-to-tr from-amber-500 to-yellow-300 rounded-full flex items-center justify-center text-slate-950 text-4xl shadow-xl shadow-amber-500/30 animate-bounce">
+                <i class="fa-solid fa-trophy"></i>
+            </div>
+            
+            <div>
+                <h2 class="text-3xl font-black text-amber-400 tracking-wider">比賽結束！</h2>
+                <p id="winner-text" class="text-xl font-bold text-slate-100 mt-2">O隊 獲得勝利！</p>
+                <p class="text-xs text-slate-400 mt-1">已成功連成指定長度之連線</p>
+            </div>
+
+            <div class="flex gap-3 w-full mt-2">
+                <button onclick="closeWinnerModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 rounded-xl transition">
+                    查看棋盤
+                </button>
+                <button onclick="resetBoardState(); closeWinnerModal();" class="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3 rounded-xl shadow-lg transition">
+                    再玩一局
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- GAME STATE VARIABLES ---
+        let gridSize = 3; // 3 or 4
+        let currentPlayer = 'O'; // 'O' or 'X'
+        let boardState = []; // Array of null, 'O', or 'X'
+        let imageList = []; // Base64 or Object URLs for questions
+        let selectedTileIndex = null;
+        let isGameOver = false;
+
+        // Initialize App on DOM Load
+        window.addEventListener('DOMContentLoaded', () => {
+            initGame();
+        });
+
+        // Initialize or Restart Game Setup
+        function initGame() {
+            const totalCells = gridSize * gridSize;
+            boardState = Array(totalCells).fill(null);
+            
+            // Generate default placeholders if images not set or resized
+            if (imageList.length !== totalCells) {
+                imageList = Array.from({ length: totalCells }, (_, i) => generatePlaceholderSvg(i + 1));
+            }
+            
+            isGameOver = false;
+            currentPlayer = 'O';
+            updateTurnUI();
+            renderBoard();
+        }
+
+        // Switch Grid Mode (3x3 vs 4x4)
+        function switchGridSize(size) {
+            if (gridSize === size) return;
+            gridSize = size;
+
+            // UI Toggle
+            const btn3 = document.getElementById('btn-mode-3');
+            const btn4 = document.getElementById('btn-mode-4');
+            const winText = document.getElementById('win-condition-text');
+
+            if (size === 3) {
+                btn3.className = "px-4 py-1.5 rounded-lg text-sm font-bold transition-all duration-200 flex items-center gap-1.5 bg-indigo-600 text-white shadow-md";
+                btn4.className = "px-4 py-1.5 rounded-lg text-sm font-bold transition-all duration-200 flex items-center gap-1.5 text-slate-400 hover:text-white";
+                winText.textContent = "任一方向連成 3 格";
+            } else {
+                btn4.className = "px-4 py-1.5 rounded-lg text-sm font-bold transition-all duration-200 flex items-center gap-1.5 bg-indigo-600 text-white shadow-md";
+                btn3.className = "px-4 py-1.5 rounded-lg text-sm font-bold transition-all duration-200 flex items-center gap-1.5 text-slate-400 hover:text-white";
+                winText.textContent = "任一方向連成 4 格";
+            }
+
+            imageList = []; // Reset image array so placeholder resizes correctly
+            initGame();
+        }
+
+        // Generate SVG Placeholder with Question Numbers
+        function generatePlaceholderSvg(number) {
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300">
+                <rect width="300" height="300" fill="#1e293b"/>
+                <circle cx="150" cy="130" r="60" fill="#334155" />
+                <text x="150" y="148" font-family="sans-serif" font-size="52" font-weight="900" fill="#94a3b8" text-anchor="middle">${number}</text>
+                <text x="150" y="230" font-family="sans-serif" font-size="22" font-weight="bold" fill="#64748b" text-anchor="middle">題目 ${number}</text>
+            </svg>`;
+            return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+        }
+
+        // Render the main grid tiles
+        function renderBoard() {
+            const gridContainer = document.getElementById('grid-container');
+            gridContainer.innerHTML = '';
+
+            // Adjust Tailwind grid column class according to gridSize
+            gridContainer.className = `grid gap-3 md:gap-4 w-full p-4 glass-panel rounded-3xl shadow-2xl transition-all duration-300 ${
+                gridSize === 3 ? 'grid-cols-3 max-w-2xl' : 'grid-cols-4 max-w-3xl'
+            }`;
+
+            boardState.forEach((state, index) => {
+                const tile = document.createElement('div');
+                tile.className = `grid-tile bg-slate-900 border-2 rounded-2xl overflow-hidden cursor-pointer flex flex-col items-center justify-center relative shadow-md select-none border-slate-700/80 hover:border-indigo-400/80`;
+                tile.id = `tile-${index}`;
+                tile.onclick = () => openTileModal(index);
+
+                // Question Image
+                const img = document.createElement('img');
+                img.src = imageList[index];
+                img.className = "w-full h-full object-cover transition-transform duration-300";
+                img.alt = `題目 ${index + 1}`;
+                tile.appendChild(img);
+
+                // Tile Number Badge (Top Left)
+                const numBadge = document.createElement('span');
+                numBadge.className = "absolute top-2 left-2 bg-slate-950/80 border border-slate-700 text-slate-300 text-xs font-bold w-6 h-6 rounded-lg flex items-center justify-center shadow backdrop-blur-sm z-10";
+                numBadge.textContent = index + 1;
+                tile.appendChild(numBadge);
+
+                // Player Mark Overlay (if marked)
+                if (state) {
+                    const overlay = document.createElement('div');
+                    overlay.className = `absolute inset-0 flex items-center justify-center backdrop-blur-[2px] transition-all ${
+                        state === 'O' ? 'bg-blue-600/35' : 'bg-red-600/35'
+                    }`;
+                    
+                    const icon = document.createElement('div');
+                    if (state === 'O') {
+                        icon.className = "w-16 h-16 md:w-20 md:h-20 border-[8px] md:border-[12px] border-blue-400 rounded-full shadow-lg drop-shadow-[0_0_15px_rgba(59,130,246,0.8)] animate-scaleIn";
+                    } else {
+                        icon.className = "text-red-400 font-black text-6xl md:text-8xl drop-shadow-[0_0_15px_rgba(239,68,68,0.8)] animate-scaleIn";
+                        icon.innerHTML = `<i class="fa-solid fa-xmark"></i>`;
+                    }
+                    overlay.appendChild(icon);
+                    tile.appendChild(overlay);
+                }
+
+                gridContainer.appendChild(tile);
+            });
+        }
+
+        // Open Modal for tile detail and selection
+        function openTileModal(index) {
+            selectedTileIndex = index;
+            document.getElementById('modal-tile-index').textContent = index + 1;
+            document.getElementById('modal-image-preview').src = imageList[index];
+            
+            const modal = document.getElementById('tile-modal');
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('tile-modal').classList.add('hidden');
+            selectedTileIndex = null;
+        }
+
+        // Mark a tile from Modal
+        function markTileFromModal(player) {
+            if (selectedTileIndex === null) return;
+            
+            boardState[selectedTileIndex] = player;
+            closeModal();
+            renderBoard();
+
+            // Check winning status
+            const winInfo = checkWinner();
+            if (winInfo) {
+                handleWin(winInfo);
+            } else {
+                // If marked a player, switch turn automatically
+                if (player) {
+                    currentPlayer = currentPlayer === 'O' ? 'X' : 'O';
+                    updateTurnUI();
+                }
+            }
+        }
+
+        // Update Turn Indicator UI
+        function updateTurnUI() {
+            const cardO = document.getElementById('player-card-O');
+            const cardX = document.getElementById('player-card-X');
+            const badgeO = document.getElementById('badge-turn-O');
+            const badgeX = document.getElementById('badge-turn-X');
+
+            if (currentPlayer === 'O') {
+                cardO.className = "glass-panel p-4 rounded-2xl border-2 transition-all duration-300 flex items-center justify-between player-active-o";
+                cardX.className = "glass-panel p-4 rounded-2xl border-2 border-slate-700/60 transition-all duration-300 flex items-center justify-between";
+                badgeO.classList.remove('hidden');
+                badgeX.classList.add('hidden');
+            } else {
+                cardX.className = "glass-panel p-4 rounded-2xl border-2 transition-all duration-300 flex items-center justify-between player-active-x";
+                cardO.className = "glass-panel p-4 rounded-2xl border-2 border-slate-700/60 transition-all duration-300 flex items-center justify-between";
+                badgeX.classList.remove('hidden');
+                badgeO.classList.add('hidden');
+            }
+        }
+
+        // Team Name Customization
+        function updateTeamNames() {
+            // Updated directly from input elements
+        }
+
+        // Check Line-Up Victory Rules
+        function checkWinner() {
+            const size = gridSize;
+            const lines = [];
+
+            // 1. Horizontal Rows
+            for (let r = 0; r < size; r++) {
+                const row = [];
+                for (let c = 0; c < size; c++) {
+                    row.push(r * size + c);
+                }
+                lines.push(row);
+            }
+
+            // 2. Vertical Columns
+            for (let c = 0; c < size; c++) {
+                const col = [];
+                for (let r = 0; r < size; r++) {
+                    col.push(r * size + c);
+                }
+                lines.push(col);
+            }
+
+            // 3. Diagonal Top-Left to Bottom-Right
+            const diag1 = [];
+            for (let i = 0; i < size; i++) {
+                diag1.push(i * size + i);
+            }
+            lines.push(diag1);
+
+            // 4. Diagonal Top-Right to Bottom-Left
+            const diag2 = [];
+            for (let i = 0; i < size; i++) {
+                diag2.push(i * size + (size - 1 - i));
+            }
+            lines.push(diag2);
+
+            // Evaluate Lines
+            for (const line of lines) {
+                const first = boardState[line[0]];
+                if (first && line.every(idx => boardState[idx] === first)) {
+                    return { winner: first, line };
+                }
+            }
+
+            return null;
+        }
+
+        // Handle Winner Found
+        function handleWin(winInfo) {
+            isGameOver = true;
+            const { winner, line } = winInfo;
+
+            // Highlight tiles
+            line.forEach(index => {
+                const tileElem = document.getElementById(`tile-${index}`);
+                if (tileElem) {
+                    tileElem.classList.add(winner === 'O' ? 'tile-win-o' : 'tile-win-x');
+                }
+            });
+
+            // Fire Confetti Animation
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 120,
+                    spread: 80,
+                    origin: { y: 0.6 }
+                });
+            }
+
+            // Display Winner Modal
+            setTimeout(() => {
+                const winnerName = winner === 'O' 
+                    ? document.getElementById('name-O').value 
+                    : document.getElementById('name-X').value;
+                
+                document.getElementById('winner-text').textContent = `${winnerName} 獲得勝利！`;
+                document.getElementById('winner-modal').classList.remove('hidden');
+            }, 600);
+        }
+
+        function closeWinnerModal() {
+            document.getElementById('winner-modal').classList.add('hidden');
+        }
+
+        // Reset game status keeping images
+        function resetBoardState() {
+            initGame();
+        }
+
+        // Reset images back to numbered SVG placeholders
+        function resetAllImages() {
+            const totalCells = gridSize * gridSize;
+            imageList = Array.from({ length: totalCells }, (_, i) => generatePlaceholderSvg(i + 1));
+            initGame();
+        }
+
+        // Batch File Upload Handler
+        function handleBatchUpload(event) {
+            const files = Array.from(event.target.files);
+            if (files.length === 0) return;
+
+            const totalCells = gridSize * gridSize;
+            const countToLoad = Math.min(files.length, totalCells);
+
+            let loadedCount = 0;
+            for (let i = 0; i < countToLoad; i++) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    imageList[i] = e.target.result;
+                    loadedCount++;
+                    if (loadedCount === countToLoad) {
+                        renderBoard();
+                    }
+                };
+                reader.readAsDataURL(files[i]);
+            }
+            event.target.value = ''; // Reset input
+        }
+
+        // Trigger file select for single tile
+        function triggerSingleUpload() {
+            document.getElementById('single-file-input').click();
+        }
+
+        // Handle single image replace
+        function handleSingleUpload(event) {
+            const file = event.target.files[0];
+            if (!file || selectedTileIndex === null) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imageList[selectedTileIndex] = e.target.result;
+                document.getElementById('modal-image-preview').src = e.target.result;
+                renderBoard();
+            };
+            reader.readAsDataURL(file);
+            event.target.value = ''; // Reset input
+        }
+    </script>
+</body>
+</html>
