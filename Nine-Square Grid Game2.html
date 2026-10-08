@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>宮格競賽連線對抗賽 - 起來動動腦</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Canvas Confetti CDN for victory celebration -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
+    
+    body {
+      font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    /* Pulsing glowing animation for victory connection line */
+    @keyframes pulseGlow {
+      0% {
+        opacity: 0.7;
+        box-shadow: 0 0 15px #f59e0b, 0 0 25px #f59e0b, 0 0 35px #f59e0b;
+      }
+      100% {
+        opacity: 1;
+        box-shadow: 0 0 25px #fbbf24, 0 0 45px #d97706, 0 0 60px #f59e0b;
+      }
+    }
+
+    .winning-line {
+      position: absolute;
+      background: linear-gradient(90deg, #f59e0b, #fef08a, #f59e0b);
+      border-radius: 9999px;
+      z-index: 30;
+      animation: pulseGlow 1s infinite alternate cubic-bezier(0.4, 0, 0.6, 1);
+      pointer-events: none;
+    }
+
+    /* Modal Backdrop Blur */
+    .modal-backdrop {
+      background-color: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(4px);
+    }
+
+    /* Card Hover dynamics */
+    .grid-card {
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .grid-card:hover {
+      transform: translateY(-4px) scale(1.02);
+    }
+
+    /* Custom scrollbar */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+
+    /* Attacker / Defender Glow Effects */
+    .attacker-glow-red {
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.3), 0 4px 12px rgba(239, 68, 68, 0.2);
+    }
+    .attacker-glow-green {
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3), 0 4px 12px rgba(16, 185, 129, 0.2);
+    }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 flex flex-col items-center pb-12">
+
+  <header class="w-full max-w-5xl px-4 pt-6 pb-2">
+    <div class="flex flex-col md:flex-row items-center justify-between gap-4 mb-4">
+      <div class="flex items-center gap-3">
+        <div class="bg-indigo-600 text-white p-3 rounded-2xl shadow-lg shadow-indigo-200">
+          <i class="fa-solid fa-gamepad text-2xl"></i>
+        </div>
+        <div>
+          <h1 class="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">起來動動腦(made by wuchiawe)</h1>
+          <p class="text-xs md:text-sm text-indigo-600 font-bold">宮格戰術連線對抗賽</p>
+        </div>
+      </div>
+
+      <!-- Mode Selector Switcher -->
+      <div class="bg-slate-200 p-1.5 rounded-2xl flex items-center shadow-inner">
+        <button id="mode-3" onclick="setGridSize(3)" class="px-5 py-2 rounded-xl font-bold text-sm transition-all duration-200 bg-white text-indigo-600 shadow-md">
+          <i class="fa-solid fa-border-all mr-1.5"></i>3 × 3 (九宮格)
+        </button>
+        <button id="mode-4" onclick="setGridSize(4)" class="px-5 py-2 rounded-xl font-bold text-sm transition-all duration-200 text-slate-600 hover:text-slate-900">
+          <i class="fa-solid fa-table-cells mr-1.5"></i>4 × 4 (十六宮格)
+        </button>
+      </div>
+    </div>
+
+    <!-- Toolbar Panel & Turn Indicator -->
+    <div class="bg-white rounded-2xl p-4 md:p-5 shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-4">
+      
+      <!-- Team Status Cards (Turn Based) -->
+      <div class="flex items-center gap-3 w-full lg:w-auto">
+        <!-- Red Team Box -->
+        <div id="red-team-card" onclick="setAttacker('red')" class="relative cursor-pointer flex items-center gap-2.5 bg-red-50 p-2 pr-4 rounded-2xl border-2 border-red-200 flex-1 sm:flex-none transition-all duration-300">
+          <span class="w-3.5 h-3.5 rounded-full bg-red-500 ml-1 shadow-sm"></span>
+          <div class="flex flex-col">
+            <span id="red-badge" class="text-[10px] font-black px-2 py-0.5 rounded-full bg-red-500 text-white w-max mb-0.5">攻方</span>
+            <input type="text" id="red-name" value="紅隊" oninput="updateTeamNames()" onclick="event.stopPropagation()"
+              class="bg-transparent text-sm font-black text-red-600 w-20 outline-none border-b border-transparent focus:border-red-400 text-left" 
+              placeholder="隊名">
+          </div>
+        </div>
+        
+        <button onclick="switchTurn()" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition active:scale-95 text-xs font-bold flex flex-col items-center justify-center gap-0.5" title="點擊切換攻守輪次">
+          <i class="fa-solid fa-arrows-rotate text-sm"></i>
+          <span>換輪</span>
+        </button>
+
+        <!-- Green Team Box -->
+        <div id="green-team-card" onclick="setAttacker('green')" class="relative cursor-pointer flex items-center gap-2.5 bg-slate-50 p-2 pr-4 rounded-2xl border-2 border-slate-200 flex-1 sm:flex-none transition-all duration-300">
+          <span class="w-3.5 h-3.5 rounded-full bg-emerald-500 ml-1 shadow-sm"></span>
+          <div class="flex flex-col">
+            <span id="green-badge" class="text-[10px] font-black px-2 py-0.5 rounded-full bg-slate-300 text-slate-600 w-max mb-0.5">等待方</span>
+            <input type="text" id="green-name" value="綠隊" oninput="updateTeamNames()" onclick="event.stopPropagation()"
+              class="bg-transparent text-sm font-black text-emerald-600 w-20 outline-none border-b border-transparent focus:border-emerald-400 text-left" 
+              placeholder="隊名">
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons & Imports -->
+      <div class="flex flex-wrap items-center gap-2.5 w-full lg:w-auto justify-end">
+        <button onclick="document.getElementById('batch-img-input').click()" 
+          class="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs md:text-sm rounded-xl transition flex items-center gap-1.5 border border-indigo-200">
+          <i class="fa-solid fa-images"></i> 批次匯入圖片
+        </button>
+        
+        <button onclick="document.getElementById('csv-input').click()" 
+          class="px-3.5 py-2 bg-sky-50 hover:bg-sky-100 text-sky-700 font-bold text-xs md:text-sm rounded-xl transition flex items-center gap-1.5 border border-sky-200">
+          <i class="fa-solid fa-file-csv"></i> 匯入 CSV 題庫
+        </button>
+        
+        <button onclick="downloadCSVTemplate()" 
+          class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs md:text-sm rounded-xl transition flex items-center gap-1 border border-slate-200"
+          title="下載範本 CSV 檔（題目,正確答案,選項一~四）">
+          <i class="fa-solid fa-download"></i> CSV 範本
+        </button>
+        
+        <button onclick="resetBoard()" 
+          class="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-xs md:text-sm rounded-xl transition flex items-center gap-1.5 border border-rose-200 ml-auto sm:ml-0">
+          <i class="fa-solid fa-rotate-right"></i> 重置戰局
+        </button>
+      </div>
+
+      <!-- Hidden Input Elements -->
+      <input type="file" id="batch-img-input" accept="image/*" multiple class="hidden" onchange="handleBatchImages(event)">
+      <input type="file" id="csv-input" accept=".csv" class="hidden" onchange="handleCSVImport(event)">
+      <input type="file" id="single-img-input" accept="image/*" class="hidden" onchange="handleSingleImage(event)">
+    </div>
+  </header>
+
+  <main class="w-full max-w-5xl px-4 my-auto flex flex-col items-center">
+    <div id="board-container" class="relative bg-white p-4 sm:p-6 rounded-3xl shadow-xl border border-slate-200 w-full max-w-[620px] aspect-square flex items-center justify-center">
+      <div id="grid" class="grid gap-3 sm:gap-4 w-full h-full">
+        <!-- Grid items generated dynamically -->
+      </div>
+    </div>
+  </main>
+
+  <!-- Question & Control Modal -->
+  <div id="modal" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4 transition-all duration-300">
+    <div class="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-xl overflow-hidden flex flex-col max-h-[92vh]">
+      
+      <!-- Modal Header -->
+      <div class="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span id="modal-tag" class="px-3 py-1 bg-sky-100 text-sky-700 font-extrabold text-xs rounded-full">題目卡片</span>
+          <h3 id="modal-title" class="text-lg font-bold text-slate-800">題目 1</h3>
+        </div>
+        <button onclick="closeModal()" class="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Modal Main Body Content -->
+      <div id="modal-content" class="p-6 overflow-y-auto custom-scrollbar flex-1 flex flex-col items-center justify-center min-h-[240px]">
+        <!-- Content rendered via JS -->
+      </div>
+
+      <!-- Modal Control Actions (Teacher/Host Scoring Buttons) -->
+      <div class="p-5 bg-slate-50 border-t border-slate-100 flex flex-col gap-3">
+        <div class="flex items-center justify-between">
+          <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">師長/主持人得分標記</p>
+          <span id="modal-turn-hint" class="text-xs font-black text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100">
+            當前攻方：紅隊
+          </span>
+        </div>
+        
+        <div class="grid grid-cols-3 gap-2">
+          <button id="btn-red-mark" onclick="markCell('red')" 
+            class="py-3 px-2 bg-red-500 hover:bg-red-600 active:scale-95 text-white font-bold text-xs sm:text-sm rounded-2xl shadow-md shadow-red-200 transition flex flex-col sm:flex-row items-center justify-center gap-1.5">
+            <i class="fa-solid fa-award"></i> <span id="btn-red-label">紅隊得分</span>
+          </button>
+          
+          <button id="btn-green-mark" onclick="markCell('green')" 
+            class="py-3 px-2 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-bold text-xs sm:text-sm rounded-2xl shadow-md shadow-emerald-200 transition flex flex-col sm:flex-row items-center justify-center gap-1.5">
+            <i class="fa-solid fa-award"></i> <span id="btn-green-label">綠隊得分</span>
+          </button>
+
+          <button onclick="markCell('wrong')" 
+            class="py-3 px-2 bg-slate-600 hover:bg-slate-700 active:scale-95 text-white font-bold text-xs sm:text-sm rounded-2xl shadow-md shadow-slate-200 transition flex flex-col sm:flex-row items-center justify-center gap-1.5">
+            <i class="fa-solid fa-xmark text-lg"></i> 兩隊皆錯
+          </button>
+        </div>
+
+        <div class="flex items-center gap-2 pt-1">
+          <button onclick="triggerSingleReplace()" 
+            class="flex-1 py-2 px-3 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 font-medium text-xs rounded-xl transition flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-image text-slate-400"></i> 更換此格圖片
+          </button>
+          <button onclick="closeModal()" 
+            class="py-2 px-5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-xl transition">
+            關閉
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // Game State Variables
+    let gridSize = 3;
+    let currentCellIndex = null;
+    let boardState = []; // Stores 'none', 'red', 'green', 'wrong'
+    let questionsData = []; // Array of objects: { type: 'text'|'img', content: '', correctOpt: 1, options: ['', '', '', ''] }
+    let currentAttacker = 'red'; // 'red' or 'green'
+    let selectedOptionForCurrentCell = null; // Track option clicked in modal
+
+    // Initialize Game Board on Load
+    window.onload = function() {
+      initGame();
+    };
+
+    /**
+     * Initialize/Reset board states and questions
+     */
+    function initGame() {
+      const totalCells = gridSize * gridSize;
+      boardState = Array(totalCells).fill('none');
+
+      // Initialize default question placeholders if length doesn't match grid
+      if (questionsData.length !== totalCells) {
+        questionsData = Array.from({ length: totalCells }, (_, i) => ({
+          type: 'text',
+          content: `範例題目 ${i + 1}：台灣最高的山峰是什麼？`,
+          correctOpt: 1,
+          options: ['玉山', '雪山', '陽明山', '阿里山']
+        }));
+      }
+
+      updateTurnUI();
+      renderBoard();
+      clearWinningLines();
+    }
+
+    /**
+     * Switch grid size between 3x3 and 4x4
+     */
+    function setGridSize(size) {
+      if (gridSize === size) return;
+      gridSize = size;
+
+      const btn3 = document.getElementById('mode-3');
+      const btn4 = document.getElementById('mode-4');
+
+      if (size === 3) {
+        btn3.className = "px-5 py-2 rounded-xl font-bold text-sm transition-all duration-200 bg-white text-indigo-600 shadow-md";
+        btn4.className = "px-5 py-2 rounded-xl font-bold text-sm transition-all duration-200 text-slate-600 hover:text-slate-900";
+      } else {
+        btn4.className = "px-5 py-2 rounded-xl font-bold text-sm transition-all duration-200 bg-white text-indigo-600 shadow-md";
+        btn3.className = "px-5 py-2 rounded-xl font-bold text-sm transition-all duration-200 text-slate-600 hover:text-slate-900";
+      }
+
+      questionsData = []; // Reset question data on size switch
+      initGame();
+    }
+
+    /**
+     * Explicitly set attacker team
+     */
+    function setAttacker(team) {
+      currentAttacker = team;
+      updateTurnUI();
+    }
+
+    /**
+     * Switch attack/wait turns between red and green teams
+     */
+    function switchTurn() {
+      currentAttacker = currentAttacker === 'red' ? 'green' : 'red';
+      updateTurnUI();
+    }
+
+    /**
+     * Update Team Badges & Card Glow based on current attacker
+     */
+    function updateTurnUI() {
+      const redCard = document.getElementById('red-team-card');
+      const greenCard = document.getElementById('green-team-card');
+      const redBadge = document.getElementById('red-badge');
+      const greenBadge = document.getElementById('green-badge');
+      const modalHint = document.getElementById('modal-turn-hint');
+
+      const redName = document.getElementById('red-name').value.trim() || '紅隊';
+      const greenName = document.getElementById('green-name').value.trim() || '綠隊';
+
+      if (currentAttacker === 'red') {
+        redCard.className = "relative cursor-pointer flex items-center gap-2.5 bg-red-500/10 p-2 pr-4 rounded-2xl border-2 border-red-500 flex-1 sm:flex-none transition-all duration-300 attacker-glow-red";
+        greenCard.className = "relative cursor-pointer flex items-center gap-2.5 bg-slate-50 p-2 pr-4 rounded-2xl border-2 border-slate-200 opacity-60 flex-1 sm:flex-none transition-all duration-300";
+
+        redBadge.innerText = "攻方";
+        redBadge.className = "text-[10px] font-black px-2.5 py-0.5 rounded-full bg-red-500 text-white w-max mb-0.5 shadow-sm";
+
+        greenBadge.innerText = "等待方";
+        greenBadge.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-500 w-max mb-0.5";
+
+        if (modalHint) modalHint.innerText = `當前攻方：${redName}`;
+      } else {
+        greenCard.className = "relative cursor-pointer flex items-center gap-2.5 bg-emerald-500/10 p-2 pr-4 rounded-2xl border-2 border-emerald-500 flex-1 sm:flex-none transition-all duration-300 attacker-glow-green";
+        redCard.className = "relative cursor-pointer flex items-center gap-2.5 bg-slate-50 p-2 pr-4 rounded-2xl border-2 border-slate-200 opacity-60 flex-1 sm:flex-none transition-all duration-300";
+
+        greenBadge.innerText = "攻方";
+        greenBadge.className = "text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-500 text-white w-max mb-0.5 shadow-sm";
+
+        redBadge.innerText = "等待方";
+        redBadge.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-500 w-max mb-0.5";
+
+        if (modalHint) modalHint.innerText = `當前攻方：${greenName}`;
+      }
+    }
+
+    /**
+     * Render grid UI elements
+     */
+    function renderBoard() {
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+      const totalCells = gridSize * gridSize;
+
+      if (gridSize === 3) {
+        grid.className = "grid grid-cols-3 grid-rows-3 gap-3 sm:gap-4 w-full h-full";
+      } else {
+        grid.className = "grid grid-cols-4 grid-rows-4 gap-2.5 sm:gap-3 w-full h-full";
+      }
+
+      for (let i = 0; i < totalCells; i++) {
+        const cell = document.createElement('div');
+        const state = boardState[i];
+
+        let baseStyle = "grid-card relative rounded-2xl flex items-center justify-center font-black cursor-pointer select-none shadow-sm border border-sky-200 transition-all duration-300";
+        
+        if (state === 'none') {
+          baseStyle += " bg-sky-100 hover:bg-sky-200 text-sky-800 text-lg sm:text-2xl";
+          cell.innerHTML = `<span>題目 ${i + 1}</span>`;
+        } else if (state === 'red') {
+          baseStyle += " bg-red-500 text-white text-lg sm:text-2xl shadow-lg shadow-red-200 border-red-600";
+          cell.innerHTML = `<span class="drop-shadow">題目 ${i + 1}</span><div class="absolute bottom-2 right-2 text-xs bg-red-700/50 px-2 py-0.5 rounded-full"><i class="fa-solid fa-check"></i></div>`;
+        } else if (state === 'green') {
+          baseStyle += " bg-emerald-500 text-white text-lg sm:text-2xl shadow-lg shadow-emerald-200 border-emerald-600";
+          cell.innerHTML = `<span class="drop-shadow">題目 ${i + 1}</span><div class="absolute bottom-2 right-2 text-xs bg-emerald-700/50 px-2 py-0.5 rounded-full"><i class="fa-solid fa-check"></i></div>`;
+        } else if (state === 'wrong') {
+          baseStyle += " bg-slate-200 text-slate-400 text-lg sm:text-2xl border-slate-300";
+          cell.innerHTML = `<span class="opacity-40">題目 ${i + 1}</span><div class="absolute inset-0 flex items-center justify-center text-slate-500 text-5xl sm:text-6xl font-black"><i class="fa-solid fa-xmark"></i></div>`;
+        }
+
+        cell.className = baseStyle;
+        cell.onclick = () => openModal(i);
+        grid.appendChild(cell);
+      }
+    }
+
+    /**
+     * Update labels for team buttons inside modal
+     */
+    function updateTeamNames() {
+      const redName = document.getElementById('red-name').value.trim() || '紅隊';
+      const greenName = document.getElementById('green-name').value.trim() || '綠隊';
+
+      document.getElementById('btn-red-label').innerText = `${redName}得分`;
+      document.getElementById('btn-green-label').innerText = `${greenName}得分`;
+
+      updateTurnUI();
+    }
+
+    /**
+     * STREAMING_CHUNK:Handling modal dialog and interactive quiz choices evaluation...
+     * Open Modal window to reveal question
+     */
+    function openModal(index) {
+      currentCellIndex = index;
+      selectedOptionForCurrentCell = null; // Reset selection state
+      document.getElementById('modal-title').innerText = `題目 ${index + 1}`;
+      
+      updateTurnUI();
+      renderModalContent();
+
+      document.getElementById('modal').classList.remove('hidden');
+    }
+
+    /**
+     * Render question, options, and answer evaluation in modal
+     */
+    function renderModalContent() {
+      const contentBox = document.getElementById('modal-content');
+      contentBox.innerHTML = '';
+
+      const q = questionsData[currentCellIndex];
+
+      if (q.type === 'img') {
+        // Image Question Layout
+        const imgContainer = document.createElement('div');
+        imgContainer.className = "w-full flex flex-col items-center justify-center";
+        
+        const img = document.createElement('img');
+        img.src = q.content;
+        img.className = "max-h-[280px] w-auto object-contain rounded-2xl shadow-md border border-slate-200";
+        img.onerror = function() {
+          imgContainer.innerHTML = `<div class="p-8 text-center text-rose-500"><i class="fa-solid fa-triangle-exclamation text-3xl mb-2"></i><p class="font-bold">圖片無法載入</p></div>`;
+        };
+        
+        imgContainer.appendChild(img);
+        contentBox.appendChild(imgContainer);
+      } else {
+        // Text Question Layout with Options
+        const wrapper = document.createElement('div');
+        wrapper.className = "w-full flex flex-col gap-4";
+
+        // Question Description Box
+        const qBox = document.createElement('div');
+        qBox.className = "bg-slate-50 p-4 rounded-2xl border border-slate-200";
+        qBox.innerHTML = `
+          <div class="text-xs font-bold text-slate-400 mb-1 flex items-center gap-1">
+            <i class="fa-solid fa-circle-question text-sky-500"></i> 題目描述
+          </div>
+          <div class="text-base sm:text-lg font-bold text-slate-800 whitespace-pre-wrap leading-relaxed">${escapeHtml(q.content)}</div>
+        `;
+        wrapper.appendChild(qBox);
+
+        // Interactive Options Grid (1 to 4)
+        const optGrid = document.createElement('div');
+        optGrid.className = "grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full";
+
+        q.options.forEach((optText, idx) => {
+          const optNum = idx + 1; // Option index 1, 2, 3, 4
+          if (!optText || optText.trim() === '') return;
+
+          const optBtn = document.createElement('button');
+          let btnStyle = "p-3 rounded-2xl text-left font-bold text-sm border-2 transition-all flex items-start gap-2.5 ";
+
+          if (selectedOptionForCurrentCell === null) {
+            btnStyle += "bg-white hover:bg-sky-50 border-slate-200 text-slate-700 hover:border-sky-300 active:scale-98 shadow-sm";
+          } else {
+            // Option evaluated state (HIDDEN CORRECT ANSWER ON WRONG GUESS)
+            if (selectedOptionForCurrentCell === q.correctOpt && optNum === q.correctOpt) {
+              // Only reveal green box if the contestant guessed correctly
+              btnStyle += "bg-emerald-50 border-emerald-500 text-emerald-800 shadow-md";
+            } else if (selectedOptionForCurrentCell === optNum && optNum !== q.correctOpt) {
+              // Show red box for the incorrect choice made by contestant
+              btnStyle += "bg-rose-50 border-rose-500 text-rose-800 shadow-md";
+            } else {
+              // Unselected options remain neutral
+              btnStyle += "bg-slate-50 border-slate-200 text-slate-400 opacity-60";
+            }
+          }
+
+          optBtn.className = btnStyle;
+          optBtn.onclick = () => selectQuizOption(optNum);
+
+          optBtn.innerHTML = `
+            <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
+              selectedOptionForCurrentCell !== null && selectedOptionForCurrentCell === q.correctOpt && optNum === q.correctOpt
+                ? 'bg-emerald-500 text-white'
+                : selectedOptionForCurrentCell === optNum
+                ? 'bg-rose-500 text-white'
+                : 'bg-slate-200 text-slate-600'
+            }">${optNum}</span>
+            <span class="flex-1">${escapeHtml(optText)}</span>
+          `;
+
+          optGrid.appendChild(optBtn);
+        });
+
+        wrapper.appendChild(optGrid);
+
+        // Answer Evaluation Feedback Box
+        if (selectedOptionForCurrentCell !== null) {
+          const evalBox = document.createElement('div');
+          const isCorrect = selectedOptionForCurrentCell === q.correctOpt;
+
+          if (isCorrect) {
+            evalBox.className = "bg-emerald-50 border-2 border-emerald-200 p-3.5 rounded-2xl flex items-center gap-3 text-emerald-800 animate-bounce-short";
+            evalBox.innerHTML = `
+              <div class="w-9 h-9 rounded-full bg-emerald-500 text-white flex items-center justify-center text-lg font-black shrink-0">
+                <i class="fa-solid fa-check"></i>
+              </div>
+              <div>
+                <p class="font-extrabold text-base">🎉 答對囉！</p>
+                <p class="text-xs font-bold text-emerald-600">請師長/主持人點擊下方按鈕進行得分標記。</p>
+              </div>
+            `;
+          } else {
+            evalBox.className = "bg-rose-50 border-2 border-rose-200 p-3.5 rounded-2xl flex items-center gap-3 text-rose-800";
+            evalBox.innerHTML = `
+              <div class="w-9 h-9 rounded-full bg-rose-500 text-white flex items-center justify-center text-lg font-black shrink-0">
+                <i class="fa-solid fa-xmark"></i>
+              </div>
+              <div>
+                <p class="font-extrabold text-base">答錯囉，請再接再厲！</p>
+                <p class="text-xs font-bold text-rose-600">可由另一隊接續搶答，或由師長/主持人進行判定與得分標記。</p>
+              </div>
+            `;
+          }
+
+          wrapper.appendChild(evalBox);
+        }
+
+        contentBox.appendChild(wrapper);
+      }
+    }
+
+    /**
+     * Trigger quiz option selection
+     */
+    function selectQuizOption(optIndex) {
+      if (selectedOptionForCurrentCell !== null) return; // Prevent re-selection
+      selectedOptionForCurrentCell = optIndex;
+      renderModalContent();
+    }
+
+    /**
+     * Close modal
+     */
+    function closeModal() {
+      document.getElementById('modal').classList.add('hidden');
+    }
+
+    /**
+     * Apply team mark or wrong mark to cell, then automatically switch turns
+     */
+    function markCell(status) {
+      if (currentCellIndex === null) return;
+      boardState[currentCellIndex] = status;
+      renderBoard();
+      closeModal();
+      
+      // Auto-switch turn after marking score
+      switchTurn();
+
+      checkWinCondition();
+    }
+
+    /**
+     * Trigger image replace for single cell
+     */
+    function triggerSingleReplace() {
+      document.getElementById('single-img-input').click();
+    }
+
+    /**
+     * STREAMING_CHUNK:Handling CSV file processing and image uploads...
+     * Handle batch image import
+     */
+    function handleBatchImages(e) {
+      const files = Array.from(e.target.files);
+      if (!files.length) return;
+
+      const totalCells = gridSize * gridSize;
+      const count = Math.min(files.length, totalCells);
+
+      let loaded = 0;
+      files.slice(0, count).forEach((file, idx) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          questionsData[idx] = {
+            type: 'img',
+            content: event.target.result,
+            correctOpt: 1,
+            options: []
+          };
+          loaded++;
+          if (loaded === count) {
+            alert(`成功批次匯入 ${count} 張圖片！`);
+            renderBoard();
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+      e.target.value = '';
+    }
+
+    /**
+     * Handle single image replacement for current modal cell
+     */
+    function handleSingleImage(e) {
+      const file = e.target.files[0];
+      if (!file || currentCellIndex === null) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        questionsData[currentCellIndex] = {
+          type: 'img',
+          content: event.target.result,
+          correctOpt: 1,
+          options: []
+        };
+        openModal(currentCellIndex); // Refresh modal view
+        renderBoard();
+      };
+      reader.readAsDataURL(file);
+      e.target.value = '';
+    }
+
+    /**
+     * Download sample CSV template with UTF-8 BOM
+     * Format: 題目,正確答案(1-4),選項一,選項二,選項三,選項四
+     */
+    function downloadCSVTemplate() {
+      const csvHeader = "題目,正確答案(1-4),選項一,選項二,選項三,選項四\n";
+      const sampleRows = [
+        '"台灣最高的山峰是什麼？","1","玉山","雪山","陽明山","阿里山"',
+        '"日光燈管內填充的主要惰性氣體是？","2","氖氣","氬氣","氦氣","氪氣"',
+        '"1 + 1 等於多少？","2","1","2","3","4"',
+        '"古人云：「三十而立」，那「四十」指什麼？","3","知天命","耳順","不惑","花甲"'
+      ].join("\n");
+
+      // UTF-8 BOM prefix (\uFEFF)
+      const blob = new Blob(["\uFEFF" + csvHeader + sampleRows], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `競賽題庫範本_${gridSize}x${gridSize}.csv`;
+      link.click();
+    }
+
+    /**
+     * Handle CSV import
+     * Format: 題目,正確答案(1-4),選項一,選項二,選項三,選項四
+     */
+    function handleCSVImport(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const text = event.target.result;
+        const rows = parseCSV(text);
+
+        if (rows.length < 2) {
+          alert('CSV 內容為空或格式不符合規範！');
+          return;
+        }
+
+        // Ignore header row (row 0)
+        const parsedQuestions = [];
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          if (row.length >= 1 && row[0].trim() !== '') {
+            const questionText = row[0].trim();
+            let correctIndex = parseInt(row[1], 10);
+            if (isNaN(correctIndex) || correctIndex < 1 || correctIndex > 4) {
+              correctIndex = 1; // Default to 1 if invalid
+            }
+
+            const options = [
+              row[2] ? row[2].trim() : '',
+              row[3] ? row[3].trim() : '',
+              row[4] ? row[4].trim() : '',
+              row[5] ? row[5].trim() : ''
+            ];
+
+            parsedQuestions.push({
+              type: 'text',
+              content: questionText,
+              correctOpt: correctIndex,
+              options: options
+            });
+          }
+        }
+
+        const totalCells = gridSize * gridSize;
+        const count = Math.min(parsedQuestions.length, totalCells);
+
+        for (let i = 0; i < count; i++) {
+          questionsData[i] = parsedQuestions[i];
+        }
+
+        alert(`成功匯入 ${count} 筆 CSV 題目！`);
+        renderBoard();
+      };
+      reader.readAsText(file, 'utf-8');
+      e.target.value = '';
+    }
+
+    /**
+     * CSV Parser supporting quotes and newlines
+     */
+    function parseCSV(str) {
+      const arr = [];
+      let quote = false;
+      let row = [''];
+
+      for (let c = 0; c < str.length; c++) {
+        let cc = str[c];
+        let nc = str[c+1];
+
+        if (cc === '"') {
+          if (quote && nc === '"') {
+            row[row.length - 1] += '"';
+            c++;
+          } else {
+            quote = !quote;
+          }
+        } else if (cc === ',' && !quote) {
+          row.push('');
+        } else if ((cc === '\r' || cc === '\n') && !quote) {
+          if (cc === '\r' && nc === '\n') {
+            c++;
+          }
+          arr.push(row);
+          row = [''];
+        } else {
+          row[row.length - 1] += cc;
+        }
+      }
+      if (row.length > 1 || row[0] !== '') {
+        arr.push(row);
+      }
+      return arr;
+    }
+
+    /**
+     * STREAMING_CHUNK:Checking bingo win logic and rendering celebratory effects...
+     * Check if a team has achieved 3-in-a-row or 4-in-a-row
+     */
+    function checkWinCondition() {
+      clearWinningLines();
+      const lines = getWinningLineCombinations();
+
+      for (let line of lines) {
+        const first = boardState[line[0]];
+        if (first === 'red' || first === 'green') {
+          const isWin = line.every(idx => boardState[idx] === first);
+          if (isWin) {
+            drawWinningLine(line);
+            triggerWinEffects(first);
+            break; // Stop at first winning connection
+          }
+        }
+      }
+    }
+
+    /**
+     * Generate all possible winning lines based on current gridSize
+     */
+    function getWinningLineCombinations() {
+      const lines = [];
+      const n = gridSize;
+
+      // Rows
+      for (let r = 0; r < n; r++) {
+        const row = [];
+        for (let c = 0; c < n; c++) row.push(r * n + c);
+        lines.push(row);
+      }
+
+      // Columns
+      for (let c = 0; c < n; c++) {
+        const col = [];
+        for (let r = 0; r < n; r++) col.push(r * n + c);
+        lines.push(col);
+      }
+
+      // Diagonals
+      const diag1 = [];
+      const diag2 = [];
+      for (let i = 0; i < n; i++) {
+        diag1.push(i * n + i);
+        diag2.push(i * n + (n - 1 - i));
+      }
+      lines.push(diag1, diag2);
+
+      return lines;
+    }
+
+    /**
+     * Render dynamic pulsing victory line across cells
+     */
+    function drawWinningLine(indices) {
+      const container = document.getElementById('board-container');
+      const grid = document.getElementById('grid');
+      const cells = grid.children;
+      
+      if (!cells || cells.length <= indices[indices.length - 1]) return;
+
+      const startCell = cells[indices[0]].getBoundingClientRect();
+      const endCell = cells[indices[indices.length - 1]].getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+
+      const x1 = startCell.left + startCell.width / 2 - containerRect.left;
+      const y1 = startCell.top + startCell.height / 2 - containerRect.top;
+      const x2 = endCell.left + endCell.width / 2 - containerRect.left;
+      const y2 = endCell.top + endCell.height / 2 - containerRect.top;
+
+      const length = Math.hypot(x2 - x1, y2 - y1);
+      const angle = Math.atan2(y2 - y1, x2 - x1) * (180 / Math.PI);
+
+      const line = document.createElement('div');
+      line.className = 'winning-line';
+      line.style.width = `${length}px`;
+      line.style.height = `${gridSize === 3 ? 16 : 12}px`;
+      line.style.left = `${x1}px`;
+      line.style.top = `${y1 - (gridSize === 3 ? 8 : 6)}px`;
+      line.style.transformOrigin = '0 50%';
+      line.style.transform = `rotate(${angle}deg)`;
+
+      container.appendChild(line);
+    }
+
+    /**
+     * Clear active winning line
+     */
+    function clearWinningLines() {
+      const lines = document.querySelectorAll('.winning-line');
+      lines.forEach(l => l.remove());
+    }
+
+    /**
+     * Trigger confetti celebratory animation and victory notification
+     */
+    function triggerWinEffects(winnerTeam) {
+      const redName = document.getElementById('red-name').value.trim() || '紅隊';
+      const greenName = document.getElementById('green-name').value.trim() || '綠隊';
+      const winnerName = winnerTeam === 'red' ? redName : greenName;
+
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 150,
+          spread: 90,
+          origin: { y: 0.6 }
+        });
+        
+        setTimeout(() => {
+          confetti({
+            particleCount: 100,
+            angle: 60,
+            spread: 55,
+            origin: { x: 0 }
+          });
+          confetti({
+            particleCount: 100,
+            angle: 120,
+            spread: 55,
+            origin: { x: 1 }
+          });
+        }, 250);
+      }
+    }
+
+    /**
+     * Reset board state while preserving imported questions and resetting attacker to red
+     */
+    function resetBoard() {
+      const totalCells = gridSize * gridSize;
+      boardState = Array(totalCells).fill('none');
+      currentAttacker = 'red';
+      updateTurnUI();
+      renderBoard();
+      clearWinningLines();
+    }
+
+    /**
+     * Helper to escape HTML characters
+     */
+    function escapeHtml(text) {
+      if (!text) return '';
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>
