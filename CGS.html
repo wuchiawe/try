@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>玉田國小｜校慶來賓簽到</title>
+  <!-- 載入 Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 載入 Google Fonts 思源黑體 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Noto Sans TC"', 'sans-serif'],
+          },
+          colors: {
+            yutian: {
+              red: '#8B1E24',      // 校慶沉穩喜氣紅
+              redDark: '#681419',
+              gold: '#C59B27',     // 榮耀金
+              goldLight: '#F9F3E3',
+              cream: '#FAF8F5',    // 溫暖象牙白背景
+              green: '#1F5C42',    // 玉田翠綠
+              greenDark: '#164330',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* 確保來賓姓名與職稱嚴格使用 22px 字級與清晰行高 */
+    .guest-info-text {
+      font-size: 22px !important;
+      line-height: 1.45;
+      word-break: break-word;
+      overflow-wrap: break-word;
+    }
+    /* 自訂捲軸美化 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #FAF8F5;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #D6CFC7;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #1F5C42;
+    }
+  </style>
+</head>
+<body class="bg-yutian-cream text-stone-800 font-sans min-h-screen flex flex-col selection:bg-yutian-green selection:text-white">
+
+  <!-- 頂部校慶主題導覽列 -->
+  <header class="bg-gradient-to-r from-yutian-green via-[#23694C] to-yutian-greenDark text-white shadow-md sticky top-0 z-30 border-b-4 border-yutian-gold">
+    <div class="max-w-4xl mx-auto px-4 py-3.5 sm:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <!-- 校徽與標題 -->
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-xl bg-white/15 border border-yutian-gold/70 flex items-center justify-center shrink-0 shadow-inner">
+          <!-- 校慶徽章 SVG -->
+          <svg class="w-7 h-7 text-amber-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-xs font-bold tracking-widest uppercase bg-yutian-gold text-stone-950 px-2 py-0.5 rounded-md">校慶貴賓接待</span>
+            <span id="sync-badge" class="text-xs text-emerald-100 flex items-center gap-1.5 bg-black/20 px-2 py-0.5 rounded-md">
+              <span id="sync-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span id="sync-status-text">雲端即時連線中</span>
+            </span>
+          </div>
+          <h1 class="text-xl sm:text-2xl font-black tracking-wide mt-0.5 text-white drop-shadow-sm">
+            玉田國小｜校慶來賓簽到
+          </h1>
+        </div>
+      </div>
+
+      <!-- 雙入口模式快速切換器 -->
+      <nav aria-label="系統入口切換" class="flex bg-black/25 p-1 rounded-xl border border-white/15 self-start sm:self-auto w-full sm:w-auto">
+        <button id="nav-reception" type="button"
+          class="flex-1 sm:flex-initial px-4 py-2 rounded-lg text-sm font-bold transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+          簽到處管理
+        </button>
+        <button id="nav-principal" type="button"
+          class="flex-1 sm:flex-initial px-4 py-2 rounded-lg text-sm font-bold transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+          </svg>
+          校長手機查閱
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- 主內容區 -->
+  <main class="flex-1 max-w-4xl w-full mx-auto px-4 py-5 sm:py-7 space-y-6">
+
+    <!-- ==================== 入口模式說明卡片 ==================== -->
+    <section id="portal-banner" class="bg-white rounded-2xl border border-stone-200/90 shadow-sm p-4 sm:p-5">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-base font-bold text-stone-800 flex items-center gap-2">
+            <span id="mode-indicator-bar" class="w-2 h-5 bg-yutian-red rounded-full inline-block"></span>
+            系統入口模式：<span id="current-mode-label" class="text-yutian-red">簽到處管理</span>
+          </h2>
+          <p class="text-xs sm:text-sm text-stone-500 mt-1" id="current-mode-desc">
+            工作人員專用介面：需先輸入管理密碼解鎖後，方可新增、編輯、調整順序或刪除紀錄。
+          </p>
+        </div>
+        <div id="banner-actions" class="flex flex-wrap items-center gap-2">
+          <!-- 解鎖後顯示「複製校長手機查閱連結」與「鎖定離開」按鈕 -->
+          <button id="btn-copy-principal-link" type="button"
+            class="hidden px-3.5 py-2.5 rounded-xl bg-yutian-goldLight hover:bg-amber-100 text-amber-950 border border-amber-300 text-xs sm:text-sm font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs">
+            <svg class="w-4 h-4 text-amber-700 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            複製「校長手機查閱」專用連結
+          </button>
+          <button id="btn-lock-desk" type="button"
+            class="hidden px-3.5 py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 border border-stone-300 text-xs sm:text-sm font-bold transition flex items-center gap-1.5 cursor-pointer">
+            <svg class="w-4 h-4 text-stone-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            鎖定離開
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 視圖 1A：簽到處管理「密碼鎖定卡片」 ==================== -->
+    <section id="reception-lock-screen" class="hidden">
+      <div class="max-w-md mx-auto bg-white rounded-2xl border-2 border-yutian-gold/60 shadow-lg p-6 sm:p-8 text-center">
+        <div class="w-16 h-16 mx-auto rounded-2xl bg-yutian-goldLight border border-amber-300 flex items-center justify-center text-yutian-red mb-4 shadow-xs">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+        </div>
+        <h2 class="text-xl sm:text-2xl font-black text-stone-800">簽到處管理驗證</h2>
+        <p class="text-sm text-stone-500 mt-1.5">
+          為避免來賓或非工作人員誤改名單，請先輸入管理密碼解鎖。
+        </p>
+
+        <div class="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold">
+          <svg class="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          貼心提示：預設管理密碼為 <span class="font-mono text-sm underline decoration-amber-400">2026</span>
+        </div>
+
+        <form id="unlock-form" class="mt-5 space-y-4 text-left">
+          <div>
+            <label for="input-admin-password" class="block text-sm font-bold text-stone-700 mb-1.5">
+              管理密碼
+            </label>
+            <input type="password" id="input-admin-password" required inputmode="numeric" autocomplete="off"
+              placeholder="請輸入管理密碼（2026）"
+              class="w-full px-4 py-3.5 text-center text-xl tracking-widest font-mono rounded-xl border-2 border-stone-300 focus:border-yutian-green focus:ring-4 focus:ring-yutian-green/10 outline-none transition bg-stone-50 focus:bg-white" />
+            <p id="password-error-msg" class="hidden text-xs font-bold text-red-600 mt-2 flex items-center gap-1">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              密碼錯誤，請重新輸入（預設密碼為 2026）
+            </p>
+          </div>
+
+          <button type="submit"
+            class="w-full py-3.5 px-5 rounded-xl bg-yutian-green hover:bg-yutian-greenDark active:scale-[0.99] text-white font-black text-base sm:text-lg shadow-md transition flex items-center justify-center gap-2 cursor-pointer">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+            </svg>
+            解鎖進入管理
+          </button>
+        </form>
+
+        <div class="mt-5 pt-4 border-t border-stone-100">
+          <button type="button" id="btn-switch-to-principal-from-lock"
+            class="text-xs sm:text-sm font-bold text-yutian-green hover:underline cursor-pointer">
+            僅需查看名單？點此免密碼前往「校長手機查閱」 →
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 視圖 1B：簽到處管理專屬操作區（解鎖後顯示） ==================== -->
+    <section id="reception-controls" class="hidden space-y-5">
+      <!-- 新增來賓簽到表單 -->
+      <div class="bg-white rounded-2xl border-2 border-yutian-green/25 shadow-md p-5 sm:p-6">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <h2 class="text-lg sm:text-xl font-black text-yutian-green flex items-center gap-2">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+            </svg>
+            來賓報到登錄
+          </h2>
+          <div class="text-xs sm:text-sm font-bold text-stone-600 bg-stone-100 px-3 py-1 rounded-full border border-stone-200">
+            台灣時間：<span id="live-tw-clock" class="text-yutian-green font-mono">--:--</span>
+          </div>
+        </div>
+
+        <form id="add-guest-form" class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 sm:gap-4 items-end">
+            <div class="sm:col-span-4">
+              <label for="input-guest-name" class="block text-sm font-bold text-stone-700 mb-1.5">
+                來賓姓名 <span class="text-yutian-red">*</span>
+              </label>
+              <input type="text" id="input-guest-name" required autocomplete="off"
+                placeholder="例如：林志明"
+                class="w-full px-4 py-3 text-lg rounded-xl border-2 border-stone-300 focus:border-yutian-green focus:ring-4 focus:ring-yutian-green/10 outline-none transition bg-stone-50 focus:bg-white" />
+            </div>
+
+            <div class="sm:col-span-6">
+              <label for="input-guest-title" class="block text-sm font-bold text-stone-700 mb-1.5">
+                單位與職稱 <span class="text-yutian-red">*</span>
+              </label>
+              <input type="text" id="input-guest-title" required autocomplete="off"
+                placeholder="可先輸入單位（如：宜蘭縣政府）再點下方職稱"
+                class="w-full px-4 py-3 text-lg rounded-xl border-2 border-stone-300 focus:border-yutian-green focus:ring-4 focus:ring-yutian-green/10 outline-none transition bg-stone-50 focus:bg-white" />
+            </div>
+
+            <div class="sm:col-span-2">
+              <button type="submit"
+                class="w-full py-3.5 px-4 rounded-xl bg-yutian-green hover:bg-yutian-greenDark active:scale-[0.98] text-white font-black text-base sm:text-lg shadow-md hover:shadow-lg transition flex items-center justify-center gap-1.5 cursor-pointer">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                簽到
+              </button>
+            </div>
+          </div>
+
+          <!-- 內建 14 項常見職稱快速點擊標籤區 -->
+          <div class="bg-stone-50/90 rounded-xl p-3 sm:p-3.5 border border-stone-200/80">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-stone-600 flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-yutian-gold"></span>
+                常見職稱快速帶入（可先輸入單位名稱，再點選職稱自動組合）：
+              </span>
+              <button type="button" id="btn-clear-add-title" class="text-xs font-bold text-stone-400 hover:text-stone-600 cursor-pointer">
+                清除職稱欄
+              </button>
+            </div>
+            <div id="add-preset-titles" class="flex flex-wrap gap-1.5 sm:gap-2">
+              <!-- 由 JS 動態生成 14 個快速職稱按鈕 -->
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- 工具列：總人數統計、「調整排序」開關與「清空名單」 -->
+      <div class="flex flex-wrap items-center justify-between gap-3 bg-white px-4 py-3 rounded-2xl border border-stone-200 shadow-sm">
+        <div class="flex items-center gap-2.5">
+          <span class="text-sm sm:text-base font-bold text-stone-700">已簽到貴賓：</span>
+          <span id="reception-count-badge" class="px-3 py-0.5 rounded-full bg-yutian-green text-white font-black text-base">0 位</span>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="btn-toggle-reorder" type="button"
+            class="px-4 py-2.5 rounded-xl border-2 border-stone-300 bg-stone-50 hover:bg-stone-100 text-stone-800 font-bold text-sm sm:text-base transition flex items-center gap-2 cursor-pointer">
+            <svg class="w-5 h-5 text-yutian-green" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+            </svg>
+            <span id="reorder-btn-text">調整排序：關閉</span>
+          </button>
+
+          <button id="btn-open-clear-all" type="button"
+            class="px-3.5 py-2.5 rounded-xl border border-red-200 bg-red-50/70 hover:bg-red-100 text-red-700 font-bold text-sm transition flex items-center gap-1.5 cursor-pointer">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            清空名單
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 視圖 2：校長手機查閱專屬頂部狀態列 ==================== -->
+    <section id="principal-status-bar" class="hidden bg-white rounded-2xl border-2 border-yutian-green/30 shadow-sm p-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5">
+          <span class="w-3 h-3 rounded-full bg-yutian-green animate-ping"></span>
+          <h2 class="text-base sm:text-lg font-black text-yutian-green">
+            貴賓即時名單（唯讀查閱）
+          </h2>
+          <span id="principal-count-badge" class="px-2.5 py-0.5 rounded-full bg-yutian-green/10 text-yutian-green font-black text-sm">
+            共 0 位
+          </span>
+        </div>
+        <div class="text-xs font-medium text-stone-600 flex flex-wrap items-center gap-2 bg-stone-100 px-3 py-1.5 rounded-xl">
+          <span class="flex items-center gap-1.5 font-bold text-yutian-green">
+            <svg class="w-3.5 h-3.5 animate-spin" style="animation-duration: 4s;" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            每 4 秒自動同步中（<span id="refresh-countdown" class="font-mono">4</span>s）
+          </span>
+          <span class="text-stone-300">|</span>
+          <span>最後同步：<span id="last-synced-time" class="font-mono font-bold text-stone-700">--:--:--</span></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 共用：來賓簽到名單列表 ==================== -->
+    <section id="guest-list-section" aria-label="來賓簽到名單" class="space-y-3">
+      <div id="guest-list-container" class="space-y-3">
+        <!-- 動態渲染來賓卡片 -->
+      </div>
+
+      <!-- 無資料空狀態 -->
+      <div id="empty-state" class="hidden bg-white rounded-2xl border-2 border-dashed border-stone-300 p-10 text-center">
+        <div class="w-16 h-16 mx-auto rounded-full bg-stone-100 flex items-center justify-center text-stone-400 mb-3">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </div>
+        <p class="text-lg font-bold text-stone-600">目前尚無來賓簽到紀錄</p>
+        <p class="text-sm text-stone-400 mt-1">第一位簽到的貴賓將自動編號為「1」號</p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 頁尾 -->
+  <footer class="mt-auto py-5 text-center text-xs text-stone-400 border-t border-stone-200/70">
+    玉田國小校慶籌備處｜貴賓接待雲端即時同步系統
+  </footer>
+
+  <!-- ==================== 編輯來賓互動視窗 (Modal) ==================== -->
+  <div id="edit-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border-2 border-yutian-gold transform transition-all my-auto">
+      <div class="flex items-center justify-between mb-4 pb-3 border-b border-stone-100">
+        <h3 class="text-xl font-black text-stone-800 flex items-center gap-2">
+          <span class="w-2.5 h-6 bg-yutian-gold rounded-full"></span>
+          編輯來賓資料
+        </h3>
+        <span id="edit-modal-time-badge" class="text-xs font-bold bg-stone-100 text-stone-600 px-2.5 py-1 rounded-lg">
+          原簽到時間：--:--
+        </span>
+      </div>
+
+      <form id="edit-guest-form" class="space-y-4">
+        <input type="hidden" id="edit-guest-id" />
+        <div>
+          <label for="edit-guest-name" class="block text-sm font-bold text-stone-700 mb-1">來賓姓名</label>
+          <input type="text" id="edit-guest-name" required
+            class="w-full px-4 py-3 text-lg rounded-xl border-2 border-stone-300 focus:border-yutian-green outline-none" />
+        </div>
+        <div>
+          <label for="edit-guest-title" class="block text-sm font-bold text-stone-700 mb-1">單位與職稱</label>
+          <input type="text" id="edit-guest-title" required
+            class="w-full px-4 py-3 text-lg rounded-xl border-2 border-stone-300 focus:border-yutian-green outline-none" />
+        </div>
+
+        <!-- 編輯視窗內建 14 項常見職稱快速按鈕 -->
+        <div class="bg-stone-50 rounded-xl p-3 border border-stone-200">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-stone-600">快速帶入或組合職稱：</span>
+            <button type="button" id="btn-clear-edit-title" class="text-xs font-bold text-stone-400 hover:text-stone-600 cursor-pointer">
+              清除職稱欄
+            </button>
+          </div>
+          <div id="edit-preset-titles" class="flex flex-wrap gap-1.5">
+            <!-- 由 JS 動態生成 14 個快速職稱按鈕 -->
+          </div>
+        </div>
+
+        <p class="text-xs text-stone-500 bg-amber-50 p-2.5 rounded-xl border border-amber-200/80">
+          註：儲存修改後，將完整保留原本的簽到時間與名單排序位置。
+        </p>
+        <div class="flex gap-3 pt-2">
+          <button type="button" id="btn-cancel-edit"
+            class="flex-1 py-3 rounded-xl border-2 border-stone-300 text-stone-700 font-bold hover:bg-stone-100 transition cursor-pointer">
+            取消
+          </button>
+          <button type="submit"
+            class="flex-1 py-3 rounded-xl bg-yutian-green hover:bg-yutian-greenDark text-white font-black shadow-md transition cursor-pointer">
+            儲存更正
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== 刪除確認互動視窗 (Modal) ==================== -->
+  <div id="delete-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border-2 border-red-200">
+      <div class="flex items-center gap-3 text-red-600 mb-3">
+        <div class="w-11 h-11 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <h3 class="text-xl font-black text-stone-900">確認刪除此筆簽到？</h3>
+      </div>
+
+      <div class="bg-red-50/80 border border-red-200 rounded-xl p-4 my-4">
+        <p class="text-sm text-stone-600 mb-1">確定要刪除以下來賓的簽到紀錄嗎？</p>
+        <p id="delete-target-display" class="text-xl font-black text-red-800 break-words">
+          --
+        </p>
+      </div>
+
+      <p class="text-xs text-stone-500 mb-5">
+        刪除後，後方來賓序號將自動遞補為連續編號；若重新登錄該來賓，將會排在名單最末位。
+      </p>
+
+      <div class="flex gap-3">
+        <button type="button" id="btn-cancel-delete"
+          class="flex-1 py-3 rounded-xl border-2 border-stone-300 text-stone-700 font-bold hover:bg-stone-100 transition cursor-pointer">
+          保留不刪除
+        </button>
+        <button type="button" id="btn-confirm-delete"
+          class="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-black shadow-md transition cursor-pointer">
+          確定刪除
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 清空全部名單確認視窗 (Modal) ==================== -->
+  <div id="clear-all-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border-2 border-red-300">
+      <div class="flex items-center gap-3 text-red-600 mb-3">
+        <div class="w-11 h-11 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <h3 class="text-xl font-black text-stone-900">確定清空全部名單？</h3>
+      </div>
+      <p class="text-sm text-stone-600 my-4 leading-relaxed">
+        此操作將會移除目前雲端上的<span class="font-black text-red-600">所有來賓簽到紀錄</span>且無法復原。清空後，下一位簽到的來賓將從「1」號重新開始編號。
+      </p>
+      <div class="flex gap-3">
+        <button type="button" id="btn-cancel-clear-all"
+          class="flex-1 py-3 rounded-xl border-2 border-stone-300 text-stone-700 font-bold hover:bg-stone-100 transition cursor-pointer">
+          取消
+        </button>
+        <button type="button" id="btn-confirm-clear-all"
+          class="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-black shadow-md transition cursor-pointer">
+          確定全部清空
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 輕量提示訊息 (Toast) -->
+  <div id="toast-container" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none transition-all duration-300 opacity-0 translate-y-3">
+    <div id="toast-message" class="bg-stone-900/95 text-white px-5 py-3 rounded-full shadow-xl text-sm font-bold flex items-center gap-2 border border-white/10">
+      <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+      <span id="toast-text">提示訊息</span>
+    </div>
+  </div>
+
+  <!-- ==================== 系統核心邏輯與 Firebase 雲端即時同步 ==================== -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import {
+      getFirestore,
+      collection,
+      doc,
+      addDoc,
+      updateDoc,
+      deleteDoc,
+      getDocs,
+      onSnapshot,
+      writeBatch
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // 常數設定
+    const ADMIN_PASSWORD = '2026';
+    const UNLOCK_SESSION_KEY = 'yutian_reception_unlocked_2026';
+    const PRESET_TITLES = [
+      '縣長',
+      '縣議員',
+      '處長',
+      '科長',
+      '鄉長',
+      '鄉代表',
+      '主秘',
+      '立委',
+      '家長會長',
+      '家長會副會長',
+      '董事長',
+      '主委',
+      '校長',
+      '校長協會總會長'
+    ];
+
+    // 全域狀態
+    let guests = []; // 陣列元素: { id: string, name: string, title: string, checkInTime: string, order: number }
+    let currentMode = 'reception'; // 'reception' | 'principal'
+    let isUnlocked = sessionStorage.getItem(UNLOCK_SESSION_KEY) === 'true';
+    let isReorderMode = false;
+    let pendingDeleteId = null;
+    let refreshCountdown = 4;
+
+    // Firebase 雲端變數
+    let db = null;
+    let auth = null;
+    let currentUser = null;
+    let guestsCollectionRef = null;
+    let isCloudConnected = false;
+
+    // DOM 元素參照
+    const navReception = document.getElementById('nav-reception');
+    const navPrincipal = document.getElementById('nav-principal');
+    const modeIndicatorBar = document.getElementById('mode-indicator-bar');
+    const currentModeLabel = document.getElementById('current-mode-label');
+    const currentModeDesc = document.getElementById('current-mode-desc');
+    const btnCopyPrincipalLink = document.getElementById('btn-copy-principal-link');
+    const btnLockDesk = document.getElementById('btn-lock-desk');
+
+    const receptionLockScreen = document.getElementById('reception-lock-screen');
+    const receptionControls = document.getElementById('reception-controls');
+    const principalStatusBar = document.getElementById('principal-status-bar');
+    const guestListSection = document.getElementById('guest-list-section');
+    const guestListContainer = document.getElementById('guest-list-container');
+    const emptyState = document.getElementById('empty-state');
+
+    const receptionCountBadge = document.getElementById('reception-count-badge');
+    const principalCountBadge = document.getElementById('principal-count-badge');
+    const btnToggleReorder = document.getElementById('btn-toggle-reorder');
+    const reorderBtnText = document.getElementById('reorder-btn-text');
+    const syncStatusText = document.getElementById('sync-status-text');
+    const syncDot = document.getElementById('sync-dot');
+
+    // 取得台灣時間 HH:mm (24小時制)
+    function getTaiwanTimeHHMM() {
+      try {
+        const now = new Date();
+        const formatter = new Intl.DateTimeFormat('zh-TW', {
+          timeZone: 'Asia/Taipei',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        });
+        let formatted = formatter.format(now);
+        if (formatted.startsWith('24:')) {
+          formatted = '00:' + formatted.slice(3);
+        }
+        return formatted;
+      } catch (e) {
+        const now = new Date();
+        const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+        const twTime = new Date(utc + (3600000 * 8));
+        return `${String(twTime.getHours()).padStart(2, '0')}:${String(twTime.getMinutes()).padStart(2, '0')}`;
+      }
+    }
+
+    // 取得台灣時間 HH:mm:ss（用於校長端顯示最後同步時間）
+    function getTaiwanTimeHHMMSS() {
+      try {
+        const now = new Date();
+        return new Intl.DateTimeFormat('zh-TW', {
+          timeZone: 'Asia/Taipei',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        }).format(now);
+      } catch (e) {
+        return new Date().toTimeString().slice(0, 8);
+      }
+    }
+
+    function updateLastSyncedDisplay() {
+      const el = document.getElementById('last-synced-time');
+      if (el) {
+        el.textContent = getTaiwanTimeHHMMSS();
+      }
+    }
+
+    function updateLiveClock() {
+      const clockEl = document.getElementById('live-tw-clock');
+      if (clockEl) {
+        clockEl.textContent = getTaiwanTimeHHMM();
+      }
+    }
+
+    // 顯示輕量提示訊息
+    let toastTimer = null;
+    function showToast(msg) {
+      const container = document.getElementById('toast-container');
+      const textEl = document.getElementById('toast-text');
+      textEl.textContent = msg;
+      container.classList.remove('opacity-0', 'translate-y-3');
+      container.classList.add('opacity-100', 'translate-y-0');
+
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        container.classList.add('opacity-0', 'translate-y-3');
+        container.classList.remove('opacity-100', 'translate-y-0');
+      }, 2500);
+    }
+
+    // ==================== 14 項內建職稱智慧組合渲染 ====================
+    function applyPresetTitleToInput(inputEl, presetTitle) {
+      const currentVal = inputEl.value.trim();
+      if (!currentVal) {
+        // 欄位為空時，直接填入職稱
+        inputEl.value = presetTitle;
+      } else {
+        // 檢查目前結尾是否已經是某個內建職稱，若是則替換該職稱，保留前方的單位名稱
+        let replaced = false;
+        // 依長度由長到短比對，避免「副會長」被「會長」誤判
+        const sortedPresets = [...PRESET_TITLES].sort((a, b) => b.length - a.length);
+        for (const p of sortedPresets) {
+          if (currentVal === p) {
+            inputEl.value = presetTitle;
+            replaced = true;
+            break;
+          }
+          if (currentVal.endsWith(' ' + p)) {
+            inputEl.value = currentVal.slice(0, -(p.length + 1)) + ' ' + presetTitle;
+            replaced = true;
+            break;
+          }
+          if (currentVal.endsWith(p)) {
+            const prefix = currentVal.slice(0, -p.length).trim();
+            inputEl.value = prefix ? `${prefix} ${presetTitle}` : presetTitle;
+            replaced = true;
+            break;
+          }
+        }
+        if (!replaced) {
+          // 前方是單位名稱（例如「宜蘭縣政府」），自動以空白分隔接續職稱
+          inputEl.value = `${currentVal} ${presetTitle}`;
+        }
+      }
+      inputEl.focus();
+    }
+
+    function renderPresetTitleButtons(containerId, targetInputId) {
+      const container = document.getElementById(containerId);
+      const targetInput = document.getElementById(targetInputId);
+      if (!container || !targetInput) return;
+
+      container.innerHTML = PRESET_TITLES.map(title => `
+        <button type="button" data-preset="${title}"
+          class="px-2.5 py-1.5 rounded-lg bg-white hover:bg-yutian-goldLight active:scale-95 text-stone-700 hover:text-amber-950 border border-stone-300 hover:border-amber-400 text-xs sm:text-sm font-bold shadow-2xs transition cursor-pointer">
+          ${title}
+        </button>
+      `).join('');
+
+      container.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-preset]');
+        if (!btn) return;
+        applyPresetTitleToInput(targetInput, btn.dataset.preset);
+      });
+    }
+
+    // ==================== Firebase 雲端資料同步邏輯 ====================
+    function sortGuestsByOrder(list) {
+      return [...list].sort((a, b) => {
+        const orderA = typeof a.order === 'number' ? a.order : Number.MAX_SAFE_INTEGER;
+        const orderB = typeof b.order === 'number' ? b.order : Number.MAX_SAFE_INTEGER;
+        if (orderA !== orderB) return orderA - orderB;
+        return (a.createdAt || 0) - (b.createdAt || 0);
+      });
+    }
+
+    async function fetchLatestGuestsFromCloud(silent = true) {
+      if (!isCloudConnected || !guestsCollectionRef || !currentUser) return;
+      try {
+        const snapshot = await getDocs(guestsCollectionRef);
+        const list = [];
+        snapshot.forEach((docSnap) => {
+          list.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        guests = sortGuestsByOrder(list);
+        updateLastSyncedDisplay();
+        renderGuestList();
+      } catch (err) {
+        if (!silent) console.error('手動拉取雲端資料失敗:', err);
+      }
+    }
+
+    async function initCloudSync() {
+      try {
+        if (typeof __firebase_config === 'undefined') {
+          syncStatusText.textContent = '離線展示模式';
+          syncDot.className = 'w-2 h-2 rounded-full bg-amber-400';
+          return;
+        }
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'yutian-school-anniversary';
+
+        const app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+
+        // 遵守規則：先完成 Auth 驗證再執行 Firestore 查詢
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+        currentUser = auth.currentUser;
+        if (!currentUser) return;
+
+        // 嚴格遵守公共資料路徑規則：/artifacts/{appId}/public/data/yutian_anniversary_guests
+        guestsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'yutian_anniversary_guests');
+        isCloudConnected = true;
+        syncStatusText.textContent = '雲端即時連線中';
+        syncDot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+
+        // 即時監聽集合變更（無複雜複合查詢，於記憶體中依 order 排序）
+        onSnapshot(guestsCollectionRef, (snapshot) => {
+          const list = [];
+          snapshot.forEach((docSnap) => {
+            list.push({ id: docSnap.id, ...docSnap.data() });
+          });
+          guests = sortGuestsByOrder(list);
+          updateLastSyncedDisplay();
+          renderGuestList();
+        }, (error) => {
+          console.error('Firestore 即時監聽錯誤:', error);
+          syncStatusText.textContent = '連線異常，重試中';
+          syncDot.className = 'w-2 h-2 rounded-full bg-red-400';
+        });
+      } catch (err) {
+        console.error('初始化雲端資料庫失敗:', err);
+        syncStatusText.textContent = '雲端連線失敗';
+        syncDot.className = 'w-2 h-2 rounded-full bg-red-400';
+      }
+    }
+
+    // ==================== 入口模式與密碼鎖定狀態控制 ====================
+    function updatePortalUI() {
+      if (currentMode === 'reception') {
+        // 簽到處管理分頁樣式
+        navReception.className = 'flex-1 sm:flex-initial px-4 py-2 rounded-lg text-sm font-black transition-all duration-200 flex items-center justify-center gap-1.5 bg-white text-yutian-green shadow-sm cursor-pointer';
+        navPrincipal.className = 'flex-1 sm:flex-initial px-4 py-2 rounded-lg text-sm font-bold transition-all duration-200 flex items-center justify-center gap-1.5 text-white/85 hover:text-white hover:bg-white/10 cursor-pointer';
+
+        principalStatusBar.classList.add('hidden');
+
+        if (isUnlocked) {
+          // 已解鎖狀態
+          modeIndicatorBar.className = 'w-2 h-5 bg-yutian-green rounded-full inline-block';
+          currentModeLabel.textContent = '簽到處管理（已解鎖）';
+          currentModeLabel.className = 'text-yutian-green';
+          currentModeDesc.textContent = '工作人員管理模式：可登錄來賓、編輯資料、上下調整順序或刪除紀錄，異動即時同步至雲端。';
+
+          btnCopyPrincipalLink.classList.remove('hidden');
+          btnLockDesk.classList.remove('hidden');
+          receptionLockScreen.classList.add('hidden');
+          receptionControls.classList.remove('hidden');
+          guestListSection.classList.remove('hidden');
+        } else {
+          // 未解鎖（鎖定中）狀態：隱藏管理控制項與操作鈕，顯示密碼鎖定卡片
+          isReorderMode = false;
+          updateReorderButtonUI();
+
+          modeIndicatorBar.className = 'w-2 h-5 bg-yutian-red rounded-full inline-block';
+          currentModeLabel.textContent = '簽到處管理（已鎖定）';
+          currentModeLabel.className = 'text-yutian-red';
+          currentModeDesc.textContent = '安全保護中：請先輸入管理密碼解鎖後，才能進行簽到登錄與名單管理。';
+
+          btnCopyPrincipalLink.classList.add('hidden');
+          btnLockDesk.classList.add('hidden');
+          receptionLockScreen.classList.remove('hidden');
+          receptionControls.classList.add('hidden');
+          // 鎖定時隱藏名單編輯區，確保未授權人員無法操作
+          guestListSection.classList.add('hidden');
+        }
+      } else {
+        // 校長手機查閱（免密碼直接進入唯讀模式）
+        isReorderMode = false;
+        updateReorderButtonUI();
+
+        navPrincipal.className = 'flex-1 sm:flex-initial px-4 py-2 rounded-lg text-sm font-black transition-all duration-200 flex items-center justify-center gap-1.5 bg-white text-yutian-green shadow-sm cursor-pointer';
+        navReception.className = 'flex-1 sm:flex-initial px-4 py-2 rounded-lg text-sm font-bold transition-all duration-200 flex items-center justify-center gap-1.5 text-white/85 hover:text-white hover:bg-white/10 cursor-pointer';
+
+        modeIndicatorBar.className = 'w-2 h-5 bg-yutian-gold rounded-full inline-block';
+        currentModeLabel.textContent = '校長手機查閱（僅查看名單）';
+        currentModeLabel.className = 'text-yutian-green';
+        currentModeDesc.textContent = '唯讀檢視模式：僅顯示序號、來賓姓名、職稱與簽到時間，每 4 秒自動與雲端同步最新名單。';
+
+        btnCopyPrincipalLink.classList.add('hidden');
+        btnLockDesk.classList.add('hidden');
+        receptionLockScreen.classList.add('hidden');
+        receptionControls.classList.add('hidden');
+        principalStatusBar.classList.remove('hidden');
+        guestListSection.classList.remove('hidden');
+
+        refreshCountdown = 4;
+        updateLastSyncedDisplay();
+      }
+
+      renderGuestList();
+    }
+
+    function setMode(mode, updateUrl = true) {
+      currentMode = mode;
+      if (updateUrl) {
+        try {
+          const url = new URL(window.location.href);
+          url.searchParams.set('mode', mode);
+          window.history.replaceState({}, '', url);
+        } catch (e) {}
+      }
+      updatePortalUI();
+    }
+
+    function updateReorderButtonUI() {
+      if (isReorderMode) {
+        btnToggleReorder.className = 'px-4 py-2.5 rounded-xl border-2 border-yutian-gold bg-yutian-goldLight text-amber-950 font-black text-sm sm:text-base shadow-xs transition flex items-center gap-2 cursor-pointer';
+        reorderBtnText.textContent = '調整排序：開啟中（完成請點此）';
+      } else {
+        btnToggleReorder.className = 'px-4 py-2.5 rounded-xl border-2 border-stone-300 bg-stone-50 hover:bg-stone-100 text-stone-800 font-bold text-sm sm:text-base transition flex items-center gap-2 cursor-pointer';
+        reorderBtnText.textContent = '調整排序：關閉';
+      }
+    }
+
+    function escapeHTML(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // ==================== 名單列表核心渲染 ====================
+    function renderGuestList() {
+      const total = guests.length;
+      receptionCountBadge.textContent = `${total} 位`;
+      principalCountBadge.textContent = `共 ${total} 位`;
+
+      if (total === 0) {
+        guestListContainer.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      const canManage = currentMode === 'reception' && isUnlocked;
+
+      const html = guests.map((guest, index) => {
+        // 依目前名單順序從 1 開始連續編號
+        const serialNumber = index + 1;
+        const safeName = escapeHTML(guest.name);
+        const safeTitle = escapeHTML(guest.title);
+        const safeTime = escapeHTML(guest.checkInTime);
+
+        let actionButtonsHTML = '';
+        if (canManage) {
+          if (isReorderMode) {
+            const isFirst = index === 0;
+            const isLast = index === total - 1;
+            actionButtonsHTML = `
+              <div class="flex items-center gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-stone-100 w-full sm:w-auto justify-end">
+                <button type="button" data-action="move-up" data-index="${index}" ${isFirst ? 'disabled' : ''}
+                  class="px-3.5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-1 transition cursor-pointer ${
+                    isFirst
+                      ? 'bg-stone-100 text-stone-300 cursor-not-allowed'
+                      : 'bg-amber-100 hover:bg-amber-200 text-amber-950 active:scale-95 shadow-2xs'
+                  }" title="上移一位">
+                  ▲ 上移
+                </button>
+                <button type="button" data-action="move-down" data-index="${index}" ${isLast ? 'disabled' : ''}
+                  class="px-3.5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-1 transition cursor-pointer ${
+                    isLast
+                      ? 'bg-stone-100 text-stone-300 cursor-not-allowed'
+                      : 'bg-amber-100 hover:bg-amber-200 text-amber-950 active:scale-95 shadow-2xs'
+                  }" title="下移一位">
+                  ▼ 下移
+                </button>
+              </div>
+            `;
+          } else {
+            actionButtonsHTML = `
+              <div class="flex items-center gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-stone-100 w-full sm:w-auto justify-end">
+                <button type="button" data-action="edit" data-id="${guest.id}"
+                  class="px-3.5 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-sm transition flex items-center gap-1 cursor-pointer">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  編輯
+                </button>
+                <button type="button" data-action="delete" data-id="${guest.id}"
+                  class="px-3.5 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 font-bold text-sm transition flex items-center gap-1 cursor-pointer">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  刪除
+                </button>
+              </div>
+            `;
+          }
+        }
+
+        return `
+          <article class="bg-white rounded-2xl border ${isReorderMode && canManage ? 'border-amber-300 bg-amber-50/20' : 'border-stone-200/90'} shadow-xs hover:shadow-md transition p-4 sm:px-5 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <!-- 左側：連續序號 + 姓名與職稱 (22px) + 簽到時間 -->
+            <div class="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
+              <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-yutian-green text-white font-black text-lg sm:text-xl flex items-center justify-center shrink-0 shadow-xs mt-0.5 sm:mt-0">
+                ${serialNumber}
+              </div>
+
+              <!-- 姓名在前，職稱緊接在後（兩者皆為 22px 字級，窄螢幕自然換行） -->
+              <div class="min-w-0 flex-1">
+                <div class="guest-info-text text-stone-900">
+                  <span class="font-black text-stone-900 mr-2">${safeName}</span><span class="font-medium text-stone-700">${safeTitle}</span>
+                </div>
+                <div class="mt-1 flex items-center gap-1.5 text-sm font-bold text-stone-500">
+                  <svg class="w-4 h-4 text-yutian-gold shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>簽到時間：<span class="font-mono text-stone-700">${safeTime}</span></span>
+                </div>
+              </div>
+            </div>
+
+            ${actionButtonsHTML}
+          </article>
+        `;
+      }).join('');
+
+      guestListContainer.innerHTML = html;
+    }
+
+    // ==================== 事件監聽綁定 ====================
+
+    // 1. 頂部雙入口切換
+    navReception.addEventListener('click', () => setMode('reception'));
+    navPrincipal.addEventListener('click', () => setMode('principal'));
+
+    // 2. 密碼解鎖與鎖定離開
+    document.getElementById('unlock-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const pwdInput = document.getElementById('input-admin-password');
+      const errorMsg = document.getElementById('password-error-msg');
+      const val = pwdInput.value.trim();
+
+      if (val === ADMIN_PASSWORD) {
+        isUnlocked = true;
+        sessionStorage.setItem(UNLOCK_SESSION_KEY, 'true');
+        pwdInput.value = '';
+        errorMsg.classList.add('hidden');
+        updatePortalUI();
+        showToast('密碼驗證成功，已解鎖簽到處管理！');
+      } else {
+        errorMsg.classList.remove('hidden');
+        pwdInput.select();
+      }
+    });
+
+    btnLockDesk.addEventListener('click', () => {
+      isUnlocked = false;
+      isReorderMode = false;
+      sessionStorage.removeItem(UNLOCK_SESSION_KEY);
+      updatePortalUI();
+      showToast('已鎖定簽到處管理畫面');
+    });
+
+    document.getElementById('btn-switch-to-principal-from-lock').addEventListener('click', () => {
+      setMode('principal');
+    });
+
+    // 3. 複製「校長手機查閱」專用連結
+    btnCopyPrincipalLink.addEventListener('click', () => {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('mode', 'principal');
+        const shareUrl = url.toString();
+
+        const tempInput = document.createElement('input');
+        tempInput.value = shareUrl;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand('copy');
+        document.body.removeChild(tempInput);
+
+        showToast('已複製「校長手機查閱」專用連結！');
+      } catch (e) {
+        showToast('請切換上方「校長手機查閱」分頁即可使用');
+      }
+    });
+
+    // 4. 清除職稱欄快捷按鈕
+    document.getElementById('btn-clear-add-title').addEventListener('click', () => {
+      const el = document.getElementById('input-guest-title');
+      el.value = '';
+      el.focus();
+    });
+    document.getElementById('btn-clear-edit-title').addEventListener('click', () => {
+      const el = document.getElementById('edit-guest-title');
+      el.value = '';
+      el.focus();
+    });
+
+    // 5. 新增來賓簽到送出（寫入 Firestore 並設定 order 為目前最大 order + 1）
+    document.getElementById('add-guest-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (currentMode !== 'reception' || !isUnlocked) return;
+
+      const nameInput = document.getElementById('input-guest-name');
+      const titleInput = document.getElementById('input-guest-title');
+      const name = nameInput.value.trim();
+      const title = titleInput.value.trim();
+      if (!name || !title) return;
+
+      const maxOrder = guests.length > 0
+        ? Math.max(...guests.map(g => (typeof g.order === 'number' ? g.order : 0)))
+        : 0;
+
+      const newGuestPayload = {
+        name: name,
+        title: title,
+        checkInTime: getTaiwanTimeHHMM(),
+        order: maxOrder + 1,
+        createdAt: Date.now()
+      };
+
+      // 先清空輸入框提升操作流暢度
+      nameInput.value = '';
+      titleInput.value = '';
+      nameInput.focus();
+
+      if (isCloudConnected && guestsCollectionRef && currentUser) {
+        try {
+          await addDoc(guestsCollectionRef, newGuestPayload);
+          showToast(`已完成「${name}」簽到並同步至雲端`);
+        } catch (err) {
+          console.error('新增來賓至雲端失敗:', err);
+          showToast('雲端同步異常，請稍後再試');
+        }
+      } else {
+        // 離線展示模式備援
+        guests.push({ id: 'local_' + Date.now(), ...newGuestPayload });
+        renderGuestList();
+        showToast(`已完成「${name}」簽到（第 ${guests.length} 號）`);
+      }
+    });
+
+    // 6. 切換「調整排序」模式
+    btnToggleReorder.addEventListener('click', () => {
+      if (!isUnlocked) return;
+      isReorderMode = !isReorderMode;
+      updateReorderButtonUI();
+      renderGuestList();
+    });
+
+    // 7. 名單內按鈕事件委派（編輯、刪除、上移、下移）
+    guestListContainer.addEventListener('click', async (e) => {
+      const btn = e.target.closest('button[data-action]');
+      if (!btn || currentMode !== 'reception' || !isUnlocked) return;
+
+      const action = btn.dataset.action;
+
+      if (action === 'move-up' || action === 'move-down') {
+        const index = Number(btn.dataset.index);
+        const swapIndex = action === 'move-up' ? index - 1 : index + 1;
+        if (swapIndex < 0 || swapIndex >= guests.length) return;
+
+        // 交換記憶體中位置並重新分配連續整數 order (1, 2, 3...)
+        const reordered = [...guests];
+        [reordered[index], reordered[swapIndex]] = [reordered[swapIndex], reordered[index]];
+        reordered.forEach((item, idx) => {
+          item.order = idx + 1;
+        });
+
+        guests = reordered;
+        renderGuestList();
+
+        if (isCloudConnected && db && guestsCollectionRef && currentUser) {
+          try {
+            const batch = writeBatch(db);
+            reordered.forEach((item, idx) => {
+              const docRef = doc(guestsCollectionRef, item.id);
+              batch.update(docRef, { order: idx + 1 });
+            });
+            await batch.commit();
+            showToast(action === 'move-up' ? '順序已上移並儲存至雲端' : '順序已下移並儲存至雲端');
+          } catch (err) {
+            console.error('更新雲端排序失敗:', err);
+            showToast('排序儲存異常，請重試');
+          }
+        }
+      } else if (action === 'edit') {
+        const id = btn.dataset.id;
+        const target = guests.find(g => g.id === id);
+        if (!target) return;
+
+        document.getElementById('edit-guest-id').value = target.id;
+        document.getElementById('edit-guest-name').value = target.name;
+        document.getElementById('edit-guest-title').value = target.title;
+        document.getElementById('edit-modal-time-badge').textContent = `原簽到時間：${target.checkInTime}`;
+
+        const editModal = document.getElementById('edit-modal');
+        editModal.classList.remove('hidden');
+        editModal.classList.add('flex');
+      } else if (action === 'delete') {
+        const id = btn.dataset.id;
+        const target = guests.find(g => g.id === id);
+        if (!target) return;
+
+        pendingDeleteId = id;
+        document.getElementById('delete-target-display').textContent = `${target.name}（${target.title}）`;
+
+        const deleteModal = document.getElementById('delete-modal');
+        deleteModal.classList.remove('hidden');
+        deleteModal.classList.add('flex');
+      }
+    });
+
+    // 8. 編輯視窗送出與取消（嚴格保留原簽到時間與 order 位置）
+    document.getElementById('edit-guest-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!isUnlocked) return;
+
+      const id = document.getElementById('edit-guest-id').value;
+      const newName = document.getElementById('edit-guest-name').value.trim();
+      const newTitle = document.getElementById('edit-guest-title').value.trim();
+      if (!id || !newName || !newTitle) return;
+
+      closeEditModal();
+
+      if (isCloudConnected && guestsCollectionRef && currentUser) {
+        try {
+          const docRef = doc(guestsCollectionRef, id);
+          await updateDoc(docRef, {
+            name: newName,
+            title: newTitle
+          });
+          showToast(`已更新「${newName}」資料`);
+        } catch (err) {
+          console.error('更新雲端來賓資料失敗:', err);
+          showToast('更新資料失敗，請重試');
+        }
+      } else {
+        guests = guests.map(g => (g.id === id ? { ...g, name: newName, title: newTitle } : g));
+        renderGuestList();
+        showToast(`已更新「${newName}」資料`);
+      }
+    });
+
+    function closeEditModal() {
+      const editModal = document.getElementById('edit-modal');
+      editModal.classList.add('hidden');
+      editModal.classList.remove('flex');
+    }
+    document.getElementById('btn-cancel-edit').addEventListener('click', closeEditModal);
+
+    // 9. 刪除單筆確認視窗
+    document.getElementById('btn-confirm-delete').addEventListener('click', async () => {
+      if (!pendingDeleteId || !isUnlocked) return;
+      const targetId = pendingDeleteId;
+      const target = guests.find(g => g.id === targetId);
+      const deletedName = target ? target.name : '';
+
+      closeDeleteModal();
+
+      if (isCloudConnected && guestsCollectionRef && currentUser) {
+        try {
+          await deleteDoc(doc(guestsCollectionRef, targetId));
+          showToast(`已刪除「${deletedName}」的簽到紀錄`);
+        } catch (err) {
+          console.error('刪除雲端資料失敗:', err);
+          showToast('刪除失敗，請重試');
+        }
+      } else {
+        guests = guests.filter(g => g.id !== targetId);
+        renderGuestList();
+        showToast(`已刪除「${deletedName}」的簽到紀錄`);
+      }
+    });
+
+    function closeDeleteModal() {
+      pendingDeleteId = null;
+      const deleteModal = document.getElementById('delete-modal');
+      deleteModal.classList.add('hidden');
+      deleteModal.classList.remove('flex');
+    }
+    document.getElementById('btn-cancel-delete').addEventListener('click', closeDeleteModal);
+
+    // 10. 清空全部名單確認視窗
+    document.getElementById('btn-open-clear-all').addEventListener('click', () => {
+      if (!isUnlocked) return;
+      if (guests.length === 0) {
+        showToast('目前名單已經是空的');
+        return;
+      }
+      const modal = document.getElementById('clear-all-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    });
+
+    document.getElementById('btn-cancel-clear-all').addEventListener('click', () => {
+      const modal = document.getElementById('clear-all-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    });
+
+    document.getElementById('btn-confirm-clear-all').addEventListener('click', async () => {
+      if (!isUnlocked) return;
+      const modal = document.getElementById('clear-all-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+
+      if (isCloudConnected && db && guestsCollectionRef && currentUser) {
+        try {
+          const snapshot = await getDocs(guestsCollectionRef);
+          const batch = writeBatch(db);
+          snapshot.forEach((docSnap) => {
+            batch.delete(docSnap.ref);
+          });
+          await batch.commit();
+          showToast('已清空所有名單，下一位將從 1 號開始');
+        } catch (err) {
+          console.error('清空名單失敗:', err);
+          showToast('清空名單失敗，請重試');
+        }
+      } else {
+        guests = [];
+        renderGuestList();
+        showToast('已清空所有名單，下一位將從 1 號開始');
+      }
+    });
+
+    // 11. 校長手機查閱：每 4 秒自動主動同步最新資料與倒數計時
+    setInterval(async () => {
+      updateLiveClock();
+
+      if (currentMode === 'principal') {
+        refreshCountdown--;
+        if (refreshCountdown <= 0) {
+          refreshCountdown = 4;
+          await fetchLatestGuestsFromCloud(true);
+        }
+        const countdownEl = document.getElementById('refresh-countdown');
+        if (countdownEl) {
+          countdownEl.textContent = refreshCountdown;
+        }
+      }
+    }, 1000);
+
+    // ==================== 系統啟動初始化 ====================
+    window.addEventListener('DOMContentLoaded', async () => {
+      updateLiveClock();
+
+      // 渲染新增與編輯表單的 14 項常見職稱快速按鈕
+      renderPresetTitleButtons('add-preset-titles', 'input-guest-title');
+      renderPresetTitleButtons('edit-preset-titles', 'edit-guest-title');
+
+      // 檢查網址參數 (?mode=principal 直接免密碼開啟校長手機查閱)
+      const params = new URLSearchParams(window.location.search);
+      const initialMode = params.get('mode') === 'principal' ? 'principal' : 'reception';
+      setMode(initialMode, false);
+
+      // 初始化雲端跨裝置即時同步
+      await initCloudSync();
+    });
+  </script>
+</body>
+</html>
