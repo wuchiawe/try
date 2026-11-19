@@ -1,0 +1,1389 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>玉田國小｜校慶來賓簽到系統</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Google Fonts: Noto Sans TC 與 Noto Serif TC 營造典雅校慶氛圍 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@600;700;900&display=swap" rel="stylesheet">
+    <!-- 引入 Phosphor Icons 圖示庫 -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'sans-serif'],
+                        serif: ['"Noto Serif TC"', 'serif'],
+                    },
+                    colors: {
+                        crimson: {
+                            800: '#991b1b',
+                            900: '#7f1d1d',
+                            950: '#450a0a',
+                        },
+                        gold: {
+                            400: '#fbbf24',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                        },
+                        academy: {
+                            800: '#166534',
+                            900: '#14532d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 自定義捲軸與微動畫 */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        @keyframes pulse-border {
+            0%, 100% { border-color: rgba(245, 158, 11, 0.4); }
+            50% { border-color: rgba(245, 158, 11, 1); }
+        }
+        .new-guest-highlight {
+            animation: pulse-border 2s infinite;
+        }
+    </style>
+</head>
+<body class="bg-stone-100 text-stone-800 min-h-screen flex flex-col selection:bg-amber-200 selection:text-red-900">
+
+    <!-- 頂部全域導覽列 (進入模式後顯示) -->
+    <header id="top-navbar" class="hidden sticky top-0 z-40 bg-red-950 text-white shadow-lg border-b-2 border-amber-500">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full bg-amber-500 text-red-950 flex items-center justify-center font-serif font-black text-lg shadow-inner">
+                    玉
+                </div>
+                <div>
+                    <h1 class="font-serif font-bold text-base sm:text-lg tracking-wide text-amber-100 leading-tight">玉田國小｜校慶來賓簽到</h1>
+                    <p id="current-mode-badge" class="text-xs text-amber-400 font-medium flex items-center gap-1">
+                        <span id="nav-sync-dot" class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span>
+                        <span id="mode-label-text">雲端資料庫已連線</span>
+                    </p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="openCloudSettingsModal()" class="px-3 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 active:scale-95 text-amber-300 border border-amber-400/50 text-xs sm:text-sm font-bold flex items-center gap-1.5 transition shadow-sm">
+                    <i class="ph-bold ph-cloud-arrow-up text-base"></i>
+                    <span class="hidden sm:inline">雲端同步設定</span>
+                    <span class="sm:hidden">雲端設定</span>
+                </button>
+                <button onclick="switchMode('home')" class="px-3 py-2 sm:px-4 sm:py-2 rounded-xl bg-red-900 hover:bg-red-800 active:scale-95 text-amber-100 border border-amber-500/40 text-xs sm:text-sm font-bold flex items-center gap-1.5 transition shadow-sm">
+                    <i class="ph ph-arrows-left-right text-base text-amber-400"></i>
+                    <span>切換模式</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 新貴賓即時提示橫幅 (校長端專用) -->
+    <div id="new-guest-toast" class="hidden fixed top-20 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-md bg-amber-500 text-red-950 px-4 py-3 rounded-2xl shadow-2xl border-2 border-white flex items-center justify-between transition-all duration-300">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-red-900 text-amber-300 flex items-center justify-center shrink-0">
+                <i class="ph-fill ph-bell-ringing text-xl animate-bounce"></i>
+            </div>
+            <div>
+                <p class="text-xs font-bold uppercase tracking-wider text-red-900">新貴賓報到！</p>
+                <p id="toast-guest-info" class="font-black text-base leading-tight">宜蘭縣政府 縣長 林姿妙</p>
+            </div>
+        </div>
+        <button onclick="dismissToast()" class="p-2 rounded-lg hover:bg-amber-600/30 text-red-950">
+            <i class="ph ph-x text-lg font-bold"></i>
+        </button>
+    </div>
+
+    <!-- 全域系統通知訊息框 (取代 alert) -->
+    <div id="system-message" class="hidden fixed bottom-6 right-6 z-50 max-w-sm bg-stone-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-stone-700 flex items-center gap-3 transition-all">
+        <i id="system-message-icon" class="ph-fill ph-check-circle text-emerald-400 text-2xl shrink-0"></i>
+        <p id="system-message-text" class="text-sm font-medium"></p>
+    </div>
+
+    <!-- 自定義確認視窗 Modal (取代 confirm) -->
+    <div id="confirm-modal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-stone-200 transform transition-all">
+            <div class="w-12 h-12 rounded-2xl bg-red-100 text-red-700 flex items-center justify-center mb-4">
+                <i class="ph-fill ph-warning-circle text-3xl"></i>
+            </div>
+            <h3 id="confirm-title" class="text-xl font-bold text-stone-900 mb-2">確認操作</h3>
+            <p id="confirm-desc" class="text-stone-600 text-sm mb-6 leading-relaxed">確定要執行此操作嗎？</p>
+            <div class="flex gap-3">
+                <button onclick="closeConfirmModal()" class="flex-1 py-3 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-sm transition">
+                    取消
+                </button>
+                <button id="confirm-action-btn" class="flex-1 py-3 rounded-xl bg-red-700 hover:bg-red-800 text-white font-bold text-sm shadow-md transition">
+                    確定執行
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ☁️ 雲端同步設定 Modal (免改程式碼串接 Google 試算表) -->
+    <div id="cloud-settings-modal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-7 shadow-2xl border border-stone-200 my-auto">
+            <div class="flex items-center justify-between pb-4 border-b border-stone-200 mb-5">
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center">
+                        <i class="ph-fill ph-cloud-check text-2xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-black text-stone-900">Google 試算表跨裝置同步設定</h3>
+                        <p class="text-xs text-stone-500">已內建玉田國小專屬試算表網址，開箱即用免重新設定</p>
+                    </div>
+                </div>
+                <button onclick="closeCloudSettingsModal()" class="p-2 rounded-xl hover:bg-stone-100 text-stone-500">
+                    <i class="ph-bold ph-x text-xl"></i>
+                </button>
+            </div>
+
+            <!-- 網址輸入區 -->
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-bold text-stone-800 mb-1.5">
+                        Apps Script 網頁應用程式網址
+                    </label>
+                    <input type="url" id="gas-url-input" placeholder="https://script.google.com/macros/s/....../exec"
+                        class="w-full px-4 py-3 rounded-xl bg-stone-50 border border-stone-300 focus:bg-white focus:border-red-700 focus:ring-2 focus:ring-red-700/20 outline-none text-sm font-mono text-stone-800">
+                    <p class="text-xs text-stone-500 mt-1.5">
+                        目前狀態：<span id="modal-sync-status" class="font-bold text-emerald-700">☁️ 雲端已連線（自動每 4 秒同步 Google 試算表）</span>
+                    </p>
+                </div>
+
+                <!-- 3 步驟精簡說明與一鍵複製程式碼 -->
+                <div class="bg-stone-50 rounded-2xl p-4 border border-stone-200 space-y-3 text-xs sm:text-sm text-stone-700">
+                    <div class="flex items-center justify-between">
+                        <span class="font-black text-stone-900">📋 Google 試算表後端欄位與程式說明：</span>
+                        <button type="button" onclick="copyGasCode()" class="px-3 py-1.5 rounded-lg bg-red-800 hover:bg-red-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition">
+                            <i class="ph-bold ph-copy"></i>
+                            <span>一鍵複製 Apps Script 程式碼</span>
+                        </button>
+                    </div>
+                    <ol class="list-decimal list-inside space-y-1.5 text-stone-600 leading-relaxed">
+                        <li>開啟 <strong>Google 試算表</strong>，在第一列 A1~H1 依序填入：<code class="bg-stone-200 px-1.5 py-0.5 rounded text-stone-900 font-mono text-xs">id, organization, title, name, category, note, introduced, checkInTime</code></li>
+                        <li>點選上方選單 <strong>擴充功能 → Apps Script</strong>，貼上剛複製的程式碼並儲存。</li>
+                        <li>點選右上角 <strong>部署 → 新增部署作業 → 網頁應用程式</strong>，將「誰可以存取」設為 <strong>「所有人」</strong>。</li>
+                    </ol>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-2.5 pt-2">
+                    <button type="button" onclick="clearGasUrl()" class="px-4 py-3 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-sm transition">
+                        重設回內建預設網址
+                    </button>
+                    <button type="button" onclick="saveGasUrl()" class="flex-1 py-3 rounded-xl bg-gradient-to-r from-red-800 to-red-700 hover:from-red-700 hover:to-red-600 text-white font-black text-sm shadow-md transition flex items-center justify-center gap-1.5">
+                        <i class="ph-bold ph-floppy-disk text-lg text-amber-300"></i>
+                        <span>儲存設定並立即同步</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 視圖 0：首頁入口選擇畫面（雙入口設計）       -->
+    <!-- ========================================== -->
+    <main id="view-home" class="flex-1 flex flex-col justify-center items-center p-4 sm:p-8 bg-gradient-to-br from-red-950 via-red-900 to-stone-900 text-white relative overflow-hidden">
+        <!-- 裝飾背景幾何紋理 -->
+        <div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: radial-gradient(#fbbf24 1.5px, transparent 1.5px); background-size: 32px 32px;"></div>
+        <div class="absolute -top-24 -right-24 w-96 h-96 bg-amber-500/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-24 -left-24 w-96 h-96 bg-red-600/20 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="max-w-4xl w-full z-10 flex flex-col items-center text-center my-auto">
+            <!-- 校慶徽章與主標題 -->
+            <div class="mb-6 inline-flex flex-col items-center">
+                <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-b from-amber-300 via-amber-500 to-amber-600 p-1 shadow-2xl mb-4">
+                    <div class="w-full h-full rounded-full bg-red-950 flex flex-col items-center justify-center border-2 border-amber-300/60">
+                        <i class="ph-fill ph-graduation-cap text-amber-400 text-3xl sm:text-4xl"></i>
+                        <span class="text-[10px] tracking-widest text-amber-200 font-bold mt-0.5">YUTIAN</span>
+                    </div>
+                </div>
+                <span class="px-4 py-1 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 text-xs sm:text-sm font-bold tracking-widest mb-3">
+                    宜蘭縣礁溪鄉玉田國民小學 • 健康・善良・樂學
+                </span>
+                <h1 class="font-serif text-3xl sm:text-5xl font-black tracking-tight text-white drop-shadow-md">
+                    玉田國小｜校慶來賓簽到系統
+                </h1>
+                <p class="text-amber-100/80 text-sm sm:text-base mt-3 max-w-xl">
+                    歡迎蒞臨玉田國小校慶盛會！本系統已內建 Google 試算表跨裝置即時同步，簽到處輸入後校長手機立即顯示。
+                </p>
+            </div>
+
+            <!-- 連線狀態指示與設定按鈕 -->
+            <div class="mb-8 flex flex-wrap items-center justify-center gap-2.5">
+                <div id="auth-status-pill" class="px-4 py-2 rounded-full bg-black/35 border border-white/15 text-xs text-amber-200 flex items-center gap-2">
+                    <span id="home-status-dot" class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    <span id="home-status-text">☁️ 雲端已連線（自動與 Google 試算表即時同步）</span>
+                </div>
+                <button onclick="openCloudSettingsModal()" class="px-4 py-2 rounded-full bg-amber-500/25 hover:bg-amber-500/40 border border-amber-400/50 text-amber-200 text-xs font-bold flex items-center gap-1.5 transition">
+                    <i class="ph-bold ph-cloud-arrow-up text-sm"></i>
+                    <span>☁️ 雲端同步設定</span>
+                </button>
+            </div>
+
+            <!-- 雙入口大卡片 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-3xl">
+                <!-- 入口一：簽到處管理 -->
+                <button onclick="switchMode('staff')" class="group text-left bg-white/95 hover:bg-white text-stone-900 rounded-3xl p-6 sm:p-8 shadow-2xl border-2 border-transparent hover:border-amber-400 transition-all duration-300 hover:-translate-y-1 active:scale-[0.99] flex flex-col justify-between relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-red-100 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
+                    <div>
+                        <div class="w-14 h-14 rounded-2xl bg-red-800 text-amber-300 flex items-center justify-center shadow-lg mb-5 relative z-10">
+                            <i class="ph-fill ph-clipboard-text text-3xl"></i>
+                        </div>
+                        <span class="inline-block px-3 py-1 rounded-lg bg-red-100 text-red-800 text-xs font-bold mb-2">工作人員專用</span>
+                        <h2 class="text-2xl sm:text-3xl font-black text-stone-900 mb-2">簽到處管理</h2>
+                        <p class="text-stone-600 text-sm sm:text-base leading-relaxed">
+                            提供來賓快速報到登錄、常用單位與職稱快選、名單搜尋編輯及 CSV 檔案匯出。
+                        </p>
+                    </div>
+                    <div class="mt-6 pt-4 border-t border-stone-200 flex items-center justify-between text-red-800 font-bold text-sm sm:text-base">
+                        <span>進入簽到登錄台</span>
+                        <span class="w-9 h-9 rounded-full bg-red-100 group-hover:bg-red-800 group-hover:text-white flex items-center justify-center transition-colors">
+                            <i class="ph-bold ph-arrow-right text-lg"></i>
+                        </span>
+                    </div>
+                </button>
+
+                <!-- 入口二：校長手機查閱 -->
+                <button onclick="switchMode('principal')" class="group text-left bg-gradient-to-br from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-red-950 rounded-3xl p-6 sm:p-8 shadow-2xl border-2 border-amber-200 transition-all duration-300 hover:-translate-y-1 active:scale-[0.99] flex flex-col justify-between relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-white/25 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
+                    <div>
+                        <div class="w-14 h-14 rounded-2xl bg-red-950 text-amber-400 flex items-center justify-center shadow-lg mb-5 relative z-10">
+                            <i class="ph-fill ph-device-mobile-speaker text-3xl"></i>
+                        </div>
+                        <span class="inline-block px-3 py-1 rounded-lg bg-red-950/15 text-red-950 text-xs font-extrabold mb-2">台上致詞專區</span>
+                        <h2 class="text-2xl sm:text-3xl font-black text-red-950 mb-2">校長手機查閱</h2>
+                        <p class="text-red-950/85 text-sm sm:text-base font-medium leading-relaxed">
+                            專為單手握持與台上閱讀設計，超大字體高對比顯示，一鍵標記「已介紹」不漏接。
+                        </p>
+                    </div>
+                    <div class="mt-6 pt-4 border-t border-red-950/15 flex items-center justify-between text-red-950 font-black text-sm sm:text-base">
+                        <span>開啟貴賓介紹名單</span>
+                        <span class="w-9 h-9 rounded-full bg-red-950 text-amber-400 group-hover:scale-110 flex items-center justify-center transition-transform">
+                            <i class="ph-bold ph-arrow-right text-lg"></i>
+                        </span>
+                    </div>
+                </button>
+            </div>
+
+            <!-- 底部統計摘要 -->
+            <div class="mt-8 text-amber-200/80 text-xs sm:text-sm flex items-center gap-4">
+                <span>目前總簽到人數：<strong id="home-total-count" class="text-white text-base">0</strong> 位</span>
+                <span>•</span>
+                <span>待介紹：<strong id="home-pending-count" class="text-amber-300 text-base">0</strong> 位</span>
+            </div>
+        </div>
+    </main>
+
+    <!-- ========================================== -->
+    <!-- 視圖 1：模式一「簽到處管理」介面             -->
+    <!-- ========================================== -->
+    <section id="view-staff" class="hidden flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            <!-- 左側：快速登錄表單 (佔 5 欄) -->
+            <div class="lg:col-span-5 bg-white rounded-3xl shadow-md border border-stone-200 p-5 sm:p-6 lg:sticky lg:top-22">
+                <div class="flex items-center justify-between mb-5 pb-3 border-b border-stone-100">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-10 h-10 rounded-xl bg-red-100 text-red-800 flex items-center justify-center">
+                            <i class="ph-fill ph-user-plus text-2xl"></i>
+                        </div>
+                        <div>
+                            <h2 id="form-heading" class="text-lg sm:text-xl font-black text-stone-900">來賓報到登錄</h2>
+                            <p class="text-xs text-stone-500">輸入後將立即同步至校長手機端</p>
+                        </div>
+                    </div>
+                    <button id="cancel-edit-btn" onclick="resetGuestForm()" class="hidden px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-600 text-xs font-bold">
+                        取消編輯
+                    </button>
+                </div>
+
+                <form id="guest-form" onsubmit="handleGuestSubmit(event)" class="space-y-4">
+                    <input type="hidden" id="edit-guest-id" value="">
+
+                    <!-- 姓名 -->
+                    <div>
+                        <label class="block text-sm font-bold text-stone-700 mb-1">
+                            來賓姓名 <span class="text-red-600">*</span>
+                        </label>
+                        <input type="text" id="input-name" required placeholder="請輸入來賓姓名（例如：林大明）"
+                            class="w-full px-4 py-3 rounded-xl bg-stone-50 border border-stone-300 focus:bg-white focus:border-red-700 focus:ring-2 focus:ring-red-700/20 outline-none text-base font-bold text-stone-900 transition">
+                    </div>
+
+                    <!-- 單位 / 服務機關 -->
+                    <div>
+                        <label class="block text-sm font-bold text-stone-700 mb-1">
+                            單位 / 服務機關 <span class="text-red-600">*</span>
+                        </label>
+                        <input type="text" id="input-org" required placeholder="請輸入或點選下方常用單位"
+                            class="w-full px-4 py-3 rounded-xl bg-stone-50 border border-stone-300 focus:bg-white focus:border-red-700 focus:ring-2 focus:ring-red-700/20 outline-none text-base text-stone-900 transition">
+                        <!-- 常用單位快選標籤 -->
+                        <div class="flex flex-wrap gap-1.5 mt-2">
+                            <button type="button" onclick="fillInput('input-org', '宜蘭縣政府')" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 hover:text-red-900 text-stone-600 text-xs font-medium transition">宜蘭縣政府</button>
+                            <button type="button" onclick="fillInput('input-org', '宜蘭縣議會')" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 hover:text-red-900 text-stone-600 text-xs font-medium transition">宜蘭縣議會</button>
+                            <button type="button" onclick="fillInput('input-org', '礁溪鄉公所')" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 hover:text-red-900 text-stone-600 text-xs font-medium transition">礁溪鄉公所</button>
+                            <button type="button" onclick="fillInput('input-org', '礁溪鄉民代表會')" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 hover:text-red-900 text-stone-600 text-xs font-medium transition">礁溪鄉民代表會</button>
+                            <button type="button" onclick="fillInput('input-org', '玉田國小家長會')" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 hover:text-red-900 text-stone-600 text-xs font-medium transition">玉田國小家長會</button>
+                            <button type="button" onclick="fillInput('input-org', '玉田國小校友會')" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 hover:text-red-900 text-stone-600 text-xs font-medium transition">玉田國小校友會</button>
+                            <button type="button" onclick="fillInput('input-org', '玉田社區發展協會')" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 hover:text-red-900 text-stone-600 text-xs font-medium transition">玉田社區發展協會</button>
+                        </div>
+                    </div>
+
+                    <!-- 職稱 -->
+                    <div>
+                        <label class="block text-sm font-bold text-stone-700 mb-1">
+                            職稱 <span class="text-red-600">*</span>
+                        </label>
+                        <input type="text" id="input-title" required placeholder="請輸入或點選下方常用職稱"
+                            class="w-full px-4 py-3 rounded-xl bg-stone-50 border border-stone-300 focus:bg-white focus:border-red-700 focus:ring-2 focus:ring-red-700/20 outline-none text-base text-stone-900 transition">
+                        <!-- 常用職稱快選標籤 -->
+                        <div class="flex flex-wrap gap-1.5 mt-2">
+                            <button type="button" onclick="fillInput('input-title', '縣長')" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 hover:text-red-900 text-stone-600 text-xs font-medium transition">縣長</button>
+                            <button type="button" onclick="fillInput('input-title', '議員')" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 hover:text-red-900 text-stone-600 text-xs font-medium transition">議員</button>
+                            <button type="button" onclick="fillInput('input-title', '鄉長')" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 hover:text-red-900 text-stone-600 text-xs font-medium transition">鄉長</button>
+                            <button type="button" onclick="fillInput('input-title', '主席')" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 hover:text-red-900 text-stone-600 text-xs font-medium transition">主席</button>
+                            <button type="button" onclick="fillInput('input-title', '代表')" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 hover:text-red-900 text-stone-600 text-xs font-medium transition">代表</button>
+                            <button type="button" onclick="fillInput('input-title', '村長')" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 hover:text-red-900 text-stone-600 text-xs font-medium transition">村長</button>
+                            <button type="button" onclick="fillInput('input-title', '會長')" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 hover:text-red-900 text-stone-600 text-xs font-medium transition">會長</button>
+                            <button type="button" onclick="fillInput('input-title', '校長')" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 hover:text-red-900 text-stone-600 text-xs font-medium transition">校長</button>
+                            <button type="button" onclick="fillInput('input-title', '理事長')" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 hover:text-red-900 text-stone-600 text-xs font-medium transition">理事長</button>
+                        </div>
+                    </div>
+
+                    <!-- 來賓類別 -->
+                    <div>
+                        <label class="block text-sm font-bold text-stone-700 mb-1">
+                            貴賓類別（影響介紹排序）
+                        </label>
+                        <select id="input-category" class="w-full px-4 py-3 rounded-xl bg-stone-50 border border-stone-300 focus:bg-white focus:border-red-700 focus:ring-2 focus:ring-red-700/20 outline-none text-base font-medium text-stone-900 transition">
+                            <option value="長官貴賓">1. 長官貴賓（縣府、鄉公所、教育處等）</option>
+                            <option value="民意代表">2. 民意代表（立委、議員、代表、村長）</option>
+                            <option value="友校校長">3. 友校校長（各級學校校長、主任）</option>
+                            <option value="家長會/校友">4. 家長會 / 校友（歷任會長、傑出校友）</option>
+                            <option value="地方仕紳/其他">5. 地方仕紳 / 其他（社區協會、顧問、企業）</option>
+                        </select>
+                    </div>
+
+                    <!-- 備註 / 介紹重點 -->
+                    <div>
+                        <label class="block text-sm font-bold text-stone-700 mb-1">
+                            備註 / 介紹重點 <span class="text-stone-400 font-normal">(選填)</span>
+                        </label>
+                        <input type="text" id="input-note" placeholder="例：贊助校慶經費、第15屆傑出校友、特別致意"
+                            class="w-full px-4 py-3 rounded-xl bg-stone-50 border border-stone-300 focus:bg-white focus:border-red-700 focus:ring-2 focus:ring-red-700/20 outline-none text-sm text-stone-900 transition">
+                    </div>
+
+                    <!-- 送出按鈕 -->
+                    <button type="submit" id="submit-guest-btn" class="w-full py-4 rounded-2xl bg-gradient-to-r from-red-800 to-red-700 hover:from-red-700 hover:to-red-600 active:scale-[0.99] text-white font-black text-lg shadow-lg shadow-red-900/20 flex items-center justify-center gap-2 transition">
+                        <i class="ph-bold ph-check-circle text-xl text-amber-300"></i>
+                        <span id="submit-btn-text">確認報到並同步</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- 右側：即時名單管理列表 (佔 7 欄) -->
+            <div class="lg:col-span-7 space-y-5">
+                
+                <!-- 統計數據卡片列 -->
+                <div class="grid grid-cols-3 gap-3 sm:gap-4">
+                    <div class="bg-white rounded-2xl p-4 shadow-sm border border-stone-200">
+                        <p class="text-xs font-bold text-stone-500">已簽到總人數</p>
+                        <p id="stat-total" class="text-2xl sm:text-3xl font-black text-stone-900 mt-1">0</p>
+                    </div>
+                    <div class="bg-amber-50 rounded-2xl p-4 shadow-sm border border-amber-200">
+                        <p class="text-xs font-bold text-amber-800">待校長介紹</p>
+                        <p id="stat-pending" class="text-2xl sm:text-3xl font-black text-amber-700 mt-1">0</p>
+                    </div>
+                    <div class="bg-emerald-50 rounded-2xl p-4 shadow-sm border border-emerald-200">
+                        <p class="text-xs font-bold text-emerald-800">已完成介紹</p>
+                        <p id="stat-introduced" class="text-2xl sm:text-3xl font-black text-emerald-700 mt-1">0</p>
+                    </div>
+                </div>
+
+                <!-- 工具列：搜尋、類別篩選、匯出與測試資料 -->
+                <div class="bg-white rounded-3xl p-4 sm:p-5 shadow-sm border border-stone-200 space-y-4">
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <div class="relative flex-1">
+                            <i class="ph ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400 text-lg"></i>
+                            <input type="text" id="staff-search" oninput="renderStaffList()" placeholder="搜尋姓名、單位、職稱或備註..."
+                                class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-stone-100 border border-transparent focus:bg-white focus:border-red-700 outline-none text-sm transition">
+                        </div>
+                        <select id="staff-filter-category" onchange="renderStaffList()" class="px-3.5 py-2.5 rounded-xl bg-stone-100 border border-transparent focus:bg-white focus:border-red-700 outline-none text-sm font-bold text-stone-700">
+                            <option value="ALL">全部類別</option>
+                            <option value="長官貴賓">長官貴賓</option>
+                            <option value="民意代表">民意代表</option>
+                            <option value="友校校長">友校校長</option>
+                            <option value="家長會/校友">家長會/校友</option>
+                            <option value="地方仕紳/其他">地方仕紳/其他</option>
+                        </select>
+                    </div>
+
+                    <!-- 快捷功能按鈕列 -->
+                    <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-stone-100">
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="seedSampleData()" class="px-3 py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold flex items-center gap-1.5 transition">
+                                <i class="ph-bold ph-sparkle"></i>
+                                <span>一鍵填入測試範例資料</span>
+                            </button>
+                            <button onclick="exportToCSV()" class="px-3 py-1.5 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-900 text-xs font-bold flex items-center gap-1.5 transition">
+                                <i class="ph-bold ph-download-simple"></i>
+                                <span>匯出 CSV 名單</span>
+                            </button>
+                        </div>
+                        <span class="text-xs text-stone-400">依報到時間新到舊排列</span>
+                    </div>
+                </div>
+
+                <!-- 來賓名單卡片容器 -->
+                <div id="staff-guest-list" class="space-y-3">
+                    <!-- 動態生成名單項目 -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 視圖 2：模式二「校長手機查閱」介面           -->
+    <!-- ========================================== -->
+    <section id="view-principal" class="hidden flex-1 max-w-2xl w-full mx-auto px-3 sm:px-5 py-4 pb-20">
+        
+        <!-- 頂部狀態分頁切換 (待介紹 / 已介紹 / 全部) -->
+        <div class="bg-stone-200/90 p-1.5 rounded-2xl grid grid-cols-3 gap-1.5 mb-4 shadow-inner">
+            <button onclick="setPrincipalTab('pending')" id="tab-pending" class="py-3 rounded-xl font-black text-sm sm:text-base transition flex items-center justify-center gap-1.5 bg-red-900 text-amber-300 shadow-md">
+                <span>待介紹</span>
+                <span id="p-badge-pending" class="px-2 py-0.5 rounded-full text-xs bg-amber-400 text-red-950 font-black">0</span>
+            </button>
+            <button onclick="setPrincipalTab('introduced')" id="tab-introduced" class="py-3 rounded-xl font-bold text-sm sm:text-base transition flex items-center justify-center gap-1.5 text-stone-600 hover:text-stone-900">
+                <span>已介紹</span>
+                <span id="p-badge-introduced" class="px-2 py-0.5 rounded-full text-xs bg-stone-300 text-stone-700 font-bold">0</span>
+            </button>
+            <button onclick="setPrincipalTab('all')" id="tab-all" class="py-3 rounded-xl font-bold text-sm sm:text-base transition flex items-center justify-center gap-1.5 text-stone-600 hover:text-stone-900">
+                <span>全部</span>
+                <span id="p-badge-all" class="px-2 py-0.5 rounded-full text-xs bg-stone-300 text-stone-700 font-bold">0</span>
+            </button>
+        </div>
+
+        <!-- 搜尋與排序控制列 -->
+        <div class="flex gap-2 mb-3">
+            <div class="relative flex-1">
+                <i class="ph-bold ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400 text-lg"></i>
+                <input type="text" id="principal-search" oninput="renderPrincipalList()" placeholder="快速搜尋貴賓姓名或單位..."
+                    class="w-full pl-10 pr-4 py-3 rounded-2xl bg-white border border-stone-300 focus:border-red-800 outline-none text-base font-medium shadow-sm">
+            </div>
+            <button onclick="togglePrincipalSort()" id="principal-sort-btn" class="px-3.5 py-3 rounded-2xl bg-white border border-stone-300 text-stone-700 font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-sm shrink-0 active:bg-stone-100">
+                <i class="ph-bold ph-sort-ascending text-base text-red-800"></i>
+                <span id="principal-sort-label">依貴賓層級</span>
+            </button>
+        </div>
+
+        <!-- 橫向滑動類別快選膠囊 -->
+        <div class="flex gap-2 overflow-x-auto no-scrollbar pb-3 mb-2" id="principal-category-pills">
+            <button onclick="setPrincipalCategory('ALL')" data-cat="ALL" class="p-cat-pill shrink-0 px-4 py-2 rounded-full text-sm font-bold bg-stone-900 text-white shadow-sm transition">
+                全部類別
+            </button>
+            <button onclick="setPrincipalCategory('長官貴賓')" data-cat="長官貴賓" class="p-cat-pill shrink-0 px-4 py-2 rounded-full text-sm font-bold bg-white text-stone-700 border border-stone-300 transition">
+                長官貴賓
+            </button>
+            <button onclick="setPrincipalCategory('民意代表')" data-cat="民意代表" class="p-cat-pill shrink-0 px-4 py-2 rounded-full text-sm font-bold bg-white text-stone-700 border border-stone-300 transition">
+                民意代表
+            </button>
+            <button onclick="setPrincipalCategory('友校校長')" data-cat="友校校長" class="p-cat-pill shrink-0 px-4 py-2 rounded-full text-sm font-bold bg-white text-stone-700 border border-stone-300 transition">
+                友校校長
+            </button>
+            <button onclick="setPrincipalCategory('家長會/校友')" data-cat="家長會/校友" class="p-cat-pill shrink-0 px-4 py-2 rounded-full text-sm font-bold bg-white text-stone-700 border border-stone-300 transition">
+                家長會/校友
+            </button>
+            <button onclick="setPrincipalCategory('地方仕紳/其他')" data-cat="地方仕紳/其他" class="p-cat-pill shrink-0 px-4 py-2 rounded-full text-sm font-bold bg-white text-stone-700 border border-stone-300 transition">
+                地方仕紳/其他
+            </button>
+        </div>
+
+        <!-- 字體大小調節列 (方便校長依舞台光線調整閱讀字級) -->
+        <div class="flex items-center justify-between bg-white/80 px-4 py-2 rounded-2xl border border-stone-200 mb-3 text-xs">
+            <span class="font-bold text-stone-600 flex items-center gap-1.5">
+                <i class="ph-bold ph-text-aa text-base text-red-800"></i> 閱讀字體大小：
+            </span>
+            <div class="flex gap-1.5">
+                <button onclick="setPrincipalFontSize('normal')" id="font-btn-normal" class="px-2.5 py-1 rounded-lg font-bold bg-stone-200 text-stone-700 transition">標準</button>
+                <button onclick="setPrincipalFontSize('large')" id="font-btn-large" class="px-2.5 py-1 rounded-lg font-black bg-red-900 text-amber-300 transition">特大</button>
+                <button onclick="setPrincipalFontSize('xlarge')" id="font-btn-xlarge" class="px-2.5 py-1 rounded-lg font-bold bg-stone-200 text-stone-700 transition">超大</button>
+            </div>
+        </div>
+
+        <!-- 校長專用大字貴賓卡片列表 -->
+        <div id="principal-guest-list" class="space-y-4">
+            <!-- 動態生成超大字體高對比卡片 -->
+        </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- GitHub Pages 雙引擎資料庫核心邏輯            -->
+    <!-- (LocalStorage 持久化 + Google 試算表雲端同步) -->
+    <!-- ========================================== -->
+    <script>
+        // 預設內建的 Google Apps Script 網頁應用程式網址（開箱即用，免設定跨裝置同步）
+        const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbw-Uiwtfc-RyoYH2eXRFZokdHn9IYvSng5YCBod9-qjLPNlaGCm4llv2UwmmxXkDkfnuQ/exec";
+
+        // 儲存鍵值定義
+        const STORAGE_KEY_GUESTS = 'yutian_school_vip_guests_v2';
+        const STORAGE_KEY_GAS_URL = 'yutian_school_gas_api_url_v2';
+
+        // 全域狀態管理
+        let guestsData = []; // 儲存所有來賓資料的本地快取
+        let gasApiUrl = DEFAULT_GAS_URL; // Google Apps Script 網頁應用程式網址
+        let syncIntervalId = null;
+        let isSyncing = false;
+        let knownGuestIds = new Set();
+        let isFirstLoad = true;
+        let currentMode = 'home';
+
+        // 校長端篩選與排序狀態
+        let principalTab = 'pending'; // 'pending' | 'introduced' | 'all'
+        let principalCategory = 'ALL';
+        let principalSortBy = 'category'; // 'category' | 'time'
+        let principalFontSize = 'large'; // 'normal' | 'large' | 'xlarge'
+
+        // 禮賓類別權重排序表
+        const CATEGORY_RANK = {
+            '長官貴賓': 1,
+            '民意代表': 2,
+            '友校校長': 3,
+            '家長會/校友': 4,
+            '地方仕紳/其他': 5
+        };
+
+        // 初始化應用程式
+        function initApp() {
+            // 1. 從 LocalStorage 載入已保存的來賓名單
+            loadGuestsFromLocal();
+
+            // 2. 載入雲端同步網址設定（優先順序：網址參數 ?api=... > localStorage 自訂網址 > DEFAULT_GAS_URL）
+            const urlParams = new URLSearchParams(window.location.search);
+            const paramApi = urlParams.get('api');
+            const savedApi = localStorage.getItem(STORAGE_KEY_GAS_URL);
+
+            if (paramApi && paramApi.startsWith('https://script.google.com/')) {
+                gasApiUrl = paramApi.trim();
+                localStorage.setItem(STORAGE_KEY_GAS_URL, gasApiUrl);
+            } else if (savedApi !== null && savedApi.trim() !== '') {
+                gasApiUrl = savedApi.trim();
+            } else {
+                gasApiUrl = DEFAULT_GAS_URL;
+            }
+            updateConnectionStatusUI();
+
+            // 3. 監聽同一瀏覽器其他分頁的 LocalStorage 變更（同機多分頁即時同步）
+            window.addEventListener('storage', (event) => {
+                if (event.key === STORAGE_KEY_GUESTS) {
+                    const prevIds = new Set(guestsData.map(g => g.id));
+                    loadGuestsFromLocal();
+                    checkAndNotifyNewGuests(prevIds);
+                    updateAllViews();
+                } else if (event.key === STORAGE_KEY_GAS_URL) {
+                    gasApiUrl = event.newValue || DEFAULT_GAS_URL;
+                    setupCloudPolling();
+                    updateConnectionStatusUI();
+                }
+            });
+
+            // 4. 啟動雲端輪詢同步
+            setupCloudPolling();
+            updateAllViews();
+        }
+
+        // 從 LocalStorage 讀取名單
+        function loadGuestsFromLocal() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY_GUESTS);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (Array.isArray(parsed)) {
+                        guestsData = parsed;
+                        if (isFirstLoad) {
+                            guestsData.forEach(g => knownGuestIds.add(g.id));
+                            isFirstLoad = false;
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("讀取本機資料失敗:", err);
+            }
+        }
+
+        // 寫入名單至 LocalStorage
+        function saveGuestsToLocal() {
+            try {
+                localStorage.setItem(STORAGE_KEY_GUESTS, JSON.stringify(guestsData));
+            } catch (err) {
+                console.error("寫入本機資料失敗:", err);
+                showToastMessage("瀏覽器儲存空間不足，請匯出備份", "error");
+            }
+        }
+
+        // 檢查並推播新報到貴賓（校長端）
+        function checkAndNotifyNewGuests(prevIds) {
+            if (currentMode !== 'principal') return;
+            for (const g of guestsData) {
+                if (!prevIds.has(g.id) && !knownGuestIds.has(g.id)) {
+                    knownGuestIds.add(g.id);
+                    showNewGuestToast(g);
+                    break;
+                }
+            }
+        }
+
+        // 設定 Google Apps Script 雲端輪詢
+        function setupCloudPolling() {
+            if (syncIntervalId) {
+                clearInterval(syncIntervalId);
+                syncIntervalId = null;
+            }
+            if (!gasApiUrl) return;
+
+            // 立即執行第一次抓取，之後每 4 秒同步一次
+            fetchFromGoogleSheets();
+            syncIntervalId = setInterval(fetchFromGoogleSheets, 4000);
+        }
+
+        // 從 Google 試算表抓取最新資料
+        async function fetchFromGoogleSheets() {
+            if (!gasApiUrl || isSyncing) return;
+            isSyncing = true;
+            try {
+                const response = await fetch(gasApiUrl, {
+                    method: 'GET',
+                    cache: 'no-store'
+                });
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                const data = await response.json();
+
+                if (Array.isArray(data)) {
+                    const prevIds = new Set(guestsData.map(g => g.id));
+                    // 支援不同欄位名稱對應（兼容 organization 或 unit）
+                    guestsData = data.map(row => ({
+                        id: String(row.id || Date.now() + Math.random()),
+                        organization: String(row.organization || row.unit || '').trim(),
+                        title: String(row.title || '').trim(),
+                        name: String(row.name || '').trim(),
+                        category: String(row.category || '地方仕紳/其他').trim(),
+                        note: String(row.note || '').trim(),
+                        introduced: row.introduced === true || String(row.introduced).toUpperCase() === 'TRUE',
+                        checkInTime: Number(row.checkInTime) || Date.now()
+                    })).filter(g => g.name !== '');
+
+                    saveGuestsToLocal();
+                    if (isFirstLoad) {
+                        guestsData.forEach(g => knownGuestIds.add(g.id));
+                        isFirstLoad = false;
+                    } else {
+                        checkAndNotifyNewGuests(prevIds);
+                    }
+                    updateAllViews();
+                    updateConnectionStatusUI(true);
+                }
+            } catch (err) {
+                console.warn("雲端試算表同步暫時異常（已保留本機資料）:", err);
+                updateConnectionStatusUI(false);
+            } finally {
+                isSyncing = false;
+            }
+        }
+
+        // 將單筆異動推送至 Google 試算表
+        async function pushToGoogleSheets(action, payload) {
+            if (!gasApiUrl) return;
+            try {
+                // 使用 text/plain 避免 CORS preflight OPTIONS 請求被 Apps Script 阻擋
+                await fetch(gasApiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8'
+                    },
+                    body: JSON.stringify({ action, ...payload })
+                });
+                // 寫入後延遲 800ms 重新拉取確認同步
+                setTimeout(fetchFromGoogleSheets, 800);
+            } catch (err) {
+                console.warn("推送至 Google 試算表失敗（資料已安全保存於本機）:", err);
+            }
+        }
+
+        // 更新畫面上的連線狀態燈號與文字
+        function updateConnectionStatusUI(isCloudOk = true) {
+            const homeDot = document.getElementById('home-status-dot');
+            const homeText = document.getElementById('home-status-text');
+            const navDot = document.getElementById('nav-sync-dot');
+            const modalStatus = document.getElementById('modal-sync-status');
+
+            if (gasApiUrl) {
+                if (isCloudOk) {
+                    if (homeDot) homeDot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
+                    if (homeText) homeText.textContent = "☁️ 雲端已連線（自動與 Google 試算表即時同步）";
+                    if (navDot) navDot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse inline-block";
+                    if (modalStatus) {
+                        modalStatus.className = "font-bold text-emerald-700";
+                        modalStatus.textContent = "☁️ 雲端已連線（每 4 秒自動與試算表雙向同步）";
+                    }
+                } else {
+                    if (homeDot) homeDot.className = "w-2 h-2 rounded-full bg-amber-400";
+                    if (homeText) homeText.textContent = "⚠️ 雲端連線重試中（目前使用本機離線快取）";
+                    if (navDot) navDot.className = "w-2 h-2 rounded-full bg-amber-400 inline-block";
+                    if (modalStatus) {
+                        modalStatus.className = "font-bold text-amber-700";
+                        modalStatus.textContent = "⚠️ 連線重試中（資料已先保存在本機瀏覽器）";
+                    }
+                }
+            } else {
+                if (homeDot) homeDot.className = "w-2 h-2 rounded-full bg-emerald-400";
+                if (homeText) homeText.textContent = "本機資料庫已就緒（資料自動保存於此裝置）";
+                if (navDot) navDot.className = "w-2 h-2 rounded-full bg-emerald-400 inline-block";
+                if (modalStatus) {
+                    modalStatus.className = "font-bold text-stone-700";
+                    modalStatus.textContent = "單機本機儲存模式（資料保存在此瀏覽器）";
+                }
+            }
+        }
+
+        // ==========================================
+        // 雲端同步設定視窗操作
+        // ==========================================
+        window.openCloudSettingsModal = function() {
+            document.getElementById('gas-url-input').value = gasApiUrl || DEFAULT_GAS_URL;
+            document.getElementById('cloud-settings-modal').classList.remove('hidden');
+        };
+
+        window.closeCloudSettingsModal = function() {
+            document.getElementById('cloud-settings-modal').classList.add('hidden');
+        };
+
+        window.saveGasUrl = function() {
+            const val = document.getElementById('gas-url-input').value.trim();
+            if (val && !val.startsWith('https://script.google.com/')) {
+                showToastMessage("網址格式不正確，請貼上 https://script.google.com/... 開頭的網址", "error");
+                return;
+            }
+            gasApiUrl = val || DEFAULT_GAS_URL;
+            localStorage.setItem(STORAGE_KEY_GAS_URL, gasApiUrl);
+            setupCloudPolling();
+            updateConnectionStatusUI();
+            closeCloudSettingsModal();
+            showToastMessage("已儲存雲端試算表連線設定，正在同步最新資料...");
+        };
+
+        window.clearGasUrl = function() {
+            document.getElementById('gas-url-input').value = DEFAULT_GAS_URL;
+            gasApiUrl = DEFAULT_GAS_URL;
+            localStorage.removeItem(STORAGE_KEY_GAS_URL);
+            setupCloudPolling();
+            updateConnectionStatusUI();
+            showToastMessage("已重設回內建預設的 Google 試算表網址");
+        };
+
+        window.copyGasCode = function() {
+            const code = `function doGet(e) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+  const data = sheet.getDataRange().getValues();
+  if (data.length <= 1) {
+    return ContentService.createTextOutput(JSON.stringify([])).setMimeType(ContentService.MimeType.JSON);
+  }
+  const headers = data[0];
+  const rows = data.slice(1).map(row => {
+    let obj = {};
+    headers.forEach((h, i) => obj[h] = row[i]);
+    obj.introduced = (obj.introduced === true || String(obj.introduced).toUpperCase() === "TRUE");
+    return obj;
+  });
+  return ContentService.createTextOutput(JSON.stringify(rows)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+  const payload = JSON.parse(e.postData.contents);
+  const data = sheet.getDataRange().getValues();
+
+  if (payload.action === "add") {
+    sheet.appendRow([
+      payload.id, payload.organization, payload.title, payload.name,
+      payload.category, payload.note, false, payload.checkInTime
+    ]);
+  } else if (payload.action === "toggle" || payload.action === "edit" || payload.action === "delete") {
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === String(payload.id)) {
+        if (payload.action === "delete") {
+          sheet.deleteRow(i + 1);
+        } else if (payload.action === "toggle") {
+          sheet.getRange(i + 1, 7).setValue(payload.introduced);
+        } else if (payload.action === "edit") {
+          sheet.getRange(i + 1, 2, 1, 5).setValues([[
+            payload.organization, payload.title, payload.name, payload.category, payload.note
+          ]]);
+        }
+        break;
+      }
+    }
+  }
+  return ContentService.createTextOutput(JSON.stringify({ status: "ok" })).setMimeType(ContentService.MimeType.JSON);
+}`;
+            const textarea = document.createElement('textarea');
+            textarea.value = code;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            showToastMessage("已複製 Google Apps Script 程式碼至剪貼簿！");
+        };
+
+        // ==========================================
+        // 視圖模式切換邏輯
+        // ==========================================
+        window.switchMode = function(mode) {
+            currentMode = mode;
+            const viewHome = document.getElementById('view-home');
+            const viewStaff = document.getElementById('view-staff');
+            const viewPrincipal = document.getElementById('view-principal');
+            const navbar = document.getElementById('top-navbar');
+            const modeLabel = document.getElementById('mode-label-text');
+
+            viewHome.classList.add('hidden');
+            viewStaff.classList.add('hidden');
+            viewPrincipal.classList.add('hidden');
+
+            if (mode === 'home') {
+                navbar.classList.add('hidden');
+                viewHome.classList.remove('hidden');
+            } else if (mode === 'staff') {
+                navbar.classList.remove('hidden');
+                viewStaff.classList.remove('hidden');
+                modeLabel.textContent = '模式：簽到處管理台（工作人員）';
+                renderStaffList();
+            } else if (mode === 'principal') {
+                navbar.classList.remove('hidden');
+                viewPrincipal.classList.remove('hidden');
+                modeLabel.textContent = '模式：校長手機查閱端（台上致詞）';
+                renderPrincipalList();
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        // ==========================================
+        // 表單快速填入與新增/編輯/刪除/介紹狀態操作
+        // ==========================================
+        window.fillInput = function(inputId, value) {
+            const el = document.getElementById(inputId);
+            if (el) {
+                el.value = value;
+                el.focus();
+            }
+        };
+
+        window.handleGuestSubmit = function(event) {
+            event.preventDefault();
+
+            const editId = document.getElementById('edit-guest-id').value.trim();
+            const name = document.getElementById('input-name').value.trim();
+            const organization = document.getElementById('input-org').value.trim();
+            const title = document.getElementById('input-title').value.trim();
+            const category = document.getElementById('input-category').value;
+            const note = document.getElementById('input-note').value.trim();
+
+            if (!name || !organization || !title) {
+                showToastMessage("請填寫完整姓名、單位與職稱！", "error");
+                return;
+            }
+
+            if (editId) {
+                // 編輯既有來賓
+                const idx = guestsData.findIndex(g => g.id === editId);
+                if (idx !== -1) {
+                    guestsData[idx] = {
+                        ...guestsData[idx],
+                        name,
+                        organization,
+                        title,
+                        category,
+                        note
+                    };
+                    saveGuestsToLocal();
+                    pushToGoogleSheets('edit', { id: editId, name, organization, title, category, note });
+                    showToastMessage(`已更新來賓資料：${organization} ${name}`);
+                }
+            } else {
+                // 新增來賓報到
+                const newGuest = {
+                    id: 'vip_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+                    name,
+                    organization,
+                    title,
+                    category,
+                    note,
+                    introduced: false,
+                    checkInTime: Date.now()
+                };
+                knownGuestIds.add(newGuest.id);
+                guestsData.unshift(newGuest);
+                saveGuestsToLocal();
+                pushToGoogleSheets('add', newGuest);
+                showToastMessage(`報到成功！${organization} ${title} ${name}`);
+            }
+
+            resetGuestForm();
+            updateAllViews();
+        };
+
+        window.editGuest = function(id) {
+            const guest = guestsData.find(g => g.id === id);
+            if (!guest) return;
+
+            document.getElementById('edit-guest-id').value = guest.id;
+            document.getElementById('input-name').value = guest.name;
+            document.getElementById('input-org').value = guest.organization;
+            document.getElementById('input-title').value = guest.title;
+            document.getElementById('input-category').value = guest.category;
+            document.getElementById('input-note').value = guest.note || '';
+
+            document.getElementById('form-heading').textContent = '編輯來賓資料';
+            document.getElementById('submit-btn-text').textContent = '儲存修改並同步';
+            document.getElementById('cancel-edit-btn').classList.remove('hidden');
+
+            document.getElementById('guest-form').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        };
+
+        window.resetGuestForm = function() {
+            document.getElementById('guest-form').reset();
+            document.getElementById('edit-guest-id').value = '';
+            document.getElementById('form-heading').textContent = '來賓報到登錄';
+            document.getElementById('submit-btn-text').textContent = '確認報到並同步';
+            document.getElementById('cancel-edit-btn').classList.add('hidden');
+        };
+
+        window.toggleIntroducedStatus = function(id) {
+            const idx = guestsData.findIndex(g => g.id === id);
+            if (idx === -1) return;
+
+            const newState = !guestsData[idx].introduced;
+            guestsData[idx].introduced = newState;
+            saveGuestsToLocal();
+            pushToGoogleSheets('toggle', { id, introduced: newState });
+
+            updateAllViews();
+            if (newState) {
+                showToastMessage(`已標記介紹完成：${guestsData[idx].name}`);
+            } else {
+                showToastMessage(`已恢復為待介紹：${guestsData[idx].name}`);
+            }
+        };
+
+        window.confirmDeleteGuest = function(id) {
+            const guest = guestsData.find(g => g.id === id);
+            if (!guest) return;
+
+            document.getElementById('confirm-title').textContent = '刪除來賓紀錄';
+            document.getElementById('confirm-desc').textContent = `確定要刪除「${guest.organization} ${guest.title} ${guest.name}」的簽到紀錄嗎？刪除後無法復原。`;
+
+            const actionBtn = document.getElementById('confirm-action-btn');
+            actionBtn.onclick = function() {
+                guestsData = guestsData.filter(g => g.id !== id);
+                saveGuestsToLocal();
+                pushToGoogleSheets('delete', { id });
+                closeConfirmModal();
+                updateAllViews();
+                showToastMessage(`已刪除來賓紀錄：${guest.name}`);
+            };
+
+            document.getElementById('confirm-modal').classList.remove('hidden');
+        };
+
+        window.closeConfirmModal = function() {
+            document.getElementById('confirm-modal').classList.add('hidden');
+        };
+
+        // ==========================================
+        // 簽到處管理列表渲染
+        // ==========================================
+        function renderStaffList() {
+            const container = document.getElementById('staff-guest-list');
+            if (!container) return;
+
+            const searchKeyword = (document.getElementById('staff-search')?.value || '').trim().toLowerCase();
+            const filterCat = document.getElementById('staff-filter-category')?.value || 'ALL';
+
+            const filtered = guestsData
+                .filter(g => {
+                    const matchCat = filterCat === 'ALL' || g.category === filterCat;
+                    const matchSearch = !searchKeyword ||
+                        g.name.toLowerCase().includes(searchKeyword) ||
+                        g.organization.toLowerCase().includes(searchKeyword) ||
+                        g.title.toLowerCase().includes(searchKeyword) ||
+                        (g.note && g.note.toLowerCase().includes(searchKeyword));
+                    return matchCat && matchSearch;
+                })
+                .sort((a, b) => (b.checkInTime || 0) - (a.checkInTime || 0));
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white rounded-3xl p-10 text-center border border-dashed border-stone-300 text-stone-400">
+                        <i class="ph ph-users-three text-5xl mb-2 text-stone-300"></i>
+                        <p class="font-bold text-stone-600 text-base">目前尚無符合條件的來賓紀錄</p>
+                        <p class="text-xs mt-1">請從左側表單登錄新來賓，或點擊「一鍵填入測試範例資料」體驗功能</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filtered.map(g => {
+                const timeStr = formatTime(g.checkInTime);
+                const statusBadge = g.introduced
+                    ? `<span class="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold flex items-center gap-1"><i class="ph-fill ph-check-circle"></i> 已介紹</span>`
+                    : `<span class="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-bold flex items-center gap-1"><i class="ph-fill ph-clock"></i> 待介紹</span>`;
+
+                return `
+                    <div class="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border ${g.introduced ? 'border-stone-200 opacity-85' : 'border-amber-300/80'} flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition hover:shadow-md">
+                        <div class="space-y-1.5">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="px-2.5 py-0.5 rounded-md bg-red-50 text-red-800 border border-red-200 text-xs font-bold">${escapeHTML(g.category)}</span>
+                                ${statusBadge}
+                                <span class="text-xs text-stone-400 font-mono">${timeStr} 報到</span>
+                            </div>
+                            <div class="flex flex-wrap items-baseline gap-2">
+                                <span class="text-sm sm:text-base font-bold text-stone-600">${escapeHTML(g.organization)}</span>
+                                <span class="text-sm font-bold text-red-800">${escapeHTML(g.title)}</span>
+                                <span class="text-xl font-black text-stone-900">${escapeHTML(g.name)}</span>
+                            </div>
+                            ${g.note ? `<p class="text-xs sm:text-sm text-amber-900 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200/70 inline-block"><i class="ph-fill ph-sparkle text-amber-600 mr-1"></i>${escapeHTML(g.note)}</p>` : ''}
+                        </div>
+                        <div class="flex items-center gap-2 self-end sm:self-center shrink-0">
+                            <button onclick="toggleIntroducedStatus('${g.id}')" title="切換介紹狀態" class="px-3 py-2 rounded-xl ${g.introduced ? 'bg-stone-100 text-stone-600 hover:bg-stone-200' : 'bg-emerald-600 text-white hover:bg-emerald-700'} text-xs font-bold transition">
+                                ${g.introduced ? '設為待介紹' : '標記已介紹'}
+                            </button>
+                            <button onclick="editGuest('${g.id}')" title="編輯資料" class="p-2.5 rounded-xl bg-stone-100 hover:bg-amber-100 text-stone-700 hover:text-amber-900 transition">
+                                <i class="ph-bold ph-pencil-simple text-base"></i>
+                            </button>
+                            <button onclick="confirmDeleteGuest('${g.id}')" title="刪除紀錄" class="p-2.5 rounded-xl bg-stone-100 hover:bg-red-100 text-stone-700 hover:text-red-700 transition">
+                                <i class="ph-bold ph-trash text-base"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ==========================================
+        // 校長手機查閱端操作與渲染
+        // ==========================================
+        window.setPrincipalTab = function(tab) {
+            principalTab = tab;
+            ['pending', 'introduced', 'all'].forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                if (!btn) return;
+                if (t === tab) {
+                    btn.className = "py-3 rounded-xl font-black text-sm sm:text-base transition flex items-center justify-center gap-1.5 bg-red-900 text-amber-300 shadow-md";
+                } else {
+                    btn.className = "py-3 rounded-xl font-bold text-sm sm:text-base transition flex items-center justify-center gap-1.5 text-stone-600 hover:text-stone-900";
+                }
+            });
+            renderPrincipalList();
+        };
+
+        window.setPrincipalCategory = function(cat) {
+            principalCategory = cat;
+            document.querySelectorAll('.p-cat-pill').forEach(btn => {
+                if (btn.dataset.cat === cat) {
+                    btn.className = "p-cat-pill shrink-0 px-4 py-2 rounded-full text-sm font-bold bg-stone-900 text-white shadow-sm transition";
+                } else {
+                    btn.className = "p-cat-pill shrink-0 px-4 py-2 rounded-full text-sm font-bold bg-white text-stone-700 border border-stone-300 transition";
+                }
+            });
+            renderPrincipalList();
+        };
+
+        window.togglePrincipalSort = function() {
+            principalSortBy = principalSortBy === 'category' ? 'time' : 'category';
+            document.getElementById('principal-sort-label').textContent =
+                principalSortBy === 'category' ? '依貴賓層級' : '依報到先後';
+            renderPrincipalList();
+        };
+
+        window.setPrincipalFontSize = function(size) {
+            principalFontSize = size;
+            ['normal', 'large', 'xlarge'].forEach(s => {
+                const btn = document.getElementById(`font-btn-${s}`);
+                if (!btn) return;
+                if (s === size) {
+                    btn.className = "px-2.5 py-1 rounded-lg font-black bg-red-900 text-amber-300 transition";
+                } else {
+                    btn.className = "px-2.5 py-1 rounded-lg font-bold bg-stone-200 text-stone-700 transition";
+                }
+            });
+            renderPrincipalList();
+        };
+
+        function renderPrincipalList() {
+            const container = document.getElementById('principal-guest-list');
+            if (!container) return;
+
+            const searchKeyword = (document.getElementById('principal-search')?.value || '').trim().toLowerCase();
+
+            // 依分頁、類別與搜尋篩選
+            const filtered = guestsData.filter(g => {
+                const matchTab =
+                    principalTab === 'all' ||
+                    (principalTab === 'pending' && !g.introduced) ||
+                    (principalTab === 'introduced' && g.introduced);
+                const matchCat = principalCategory === 'ALL' || g.category === principalCategory;
+                const matchSearch = !searchKeyword ||
+                    g.name.toLowerCase().includes(searchKeyword) ||
+                    g.organization.toLowerCase().includes(searchKeyword) ||
+                    g.title.toLowerCase().includes(searchKeyword) ||
+                    (g.note && g.note.toLowerCase().includes(searchKeyword));
+                return matchTab && matchCat && matchSearch;
+            });
+
+            // 排序
+            filtered.sort((a, b) => {
+                if (principalSortBy === 'category') {
+                    const rankA = CATEGORY_RANK[a.category] || 99;
+                    const rankB = CATEGORY_RANK[b.category] || 99;
+                    if (rankA !== rankB) return rankA - rankB;
+                }
+                return (b.checkInTime || 0) - (a.checkInTime || 0);
+            });
+
+            // 字體級距設定
+            const fontClasses = {
+                normal: { org: 'text-base', title: 'text-lg', name: 'text-2xl', note: 'text-sm' },
+                large:  { org: 'text-lg sm:text-xl', title: 'text-xl sm:text-2xl', name: 'text-3xl sm:text-4xl', note: 'text-base' },
+                xlarge: { org: 'text-xl sm:text-2xl', title: 'text-2xl sm:text-3xl', name: 'text-4xl sm:text-5xl', note: 'text-lg' }
+            }[principalFontSize];
+
+            if (filtered.length === 0) {
+                const emptyText = principalTab === 'pending'
+                    ? '太棒了！目前所有已報到貴賓皆已介紹完畢'
+                    : '目前沒有符合條件的貴賓名單';
+                container.innerHTML = `
+                    <div class="bg-white rounded-3xl p-10 text-center border border-stone-200 shadow-sm">
+                        <i class="ph-fill ph-sparkle text-5xl text-amber-400 mb-3"></i>
+                        <p class="font-black text-stone-800 text-lg">${emptyText}</p>
+                        <p class="text-sm text-stone-500 mt-1">當簽到處登錄新來賓時，畫面將自動即時更新</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filtered.map(g => {
+                const isDone = g.introduced;
+                return `
+                    <div class="rounded-3xl p-5 sm:p-6 shadow-md border-2 transition-all ${isDone ? 'bg-stone-100/90 border-stone-300 opacity-75' : 'bg-white border-amber-400'}">
+                        <div class="flex items-center justify-between gap-2 mb-2">
+                            <span class="px-3 py-1 rounded-full text-xs font-black ${isDone ? 'bg-stone-200 text-stone-600' : 'bg-red-900 text-amber-300'}">
+                                ${escapeHTML(g.category)}
+                            </span>
+                            <span class="text-xs font-bold text-stone-400">${formatTime(g.checkInTime)} 蒞臨</span>
+                        </div>
+
+                        <div class="my-2">
+                            <p class="${fontClasses.org} font-bold text-stone-600 leading-snug">
+                                ${escapeHTML(g.organization)}
+                            </p>
+                            <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 mt-1">
+                                <span class="${fontClasses.title} font-extrabold text-red-800">
+                                    ${escapeHTML(g.title)}
+                                </span>
+                                <span class="${fontClasses.name} font-black text-stone-950 tracking-wide">
+                                    ${escapeHTML(g.name)}
+                                </span>
+                            </div>
+                        </div>
+
+                        ${g.note ? `
+                            <div class="mt-3 p-3 rounded-2xl bg-amber-50 border border-amber-300 text-red-950 ${fontClasses.note} font-bold flex items-start gap-2">
+                                <i class="ph-fill ph-star text-amber-500 text-xl shrink-0 mt-0.5"></i>
+                                <span>${escapeHTML(g.note)}</span>
+                            </div>
+                        ` : ''}
+
+                        <button onclick="toggleIntroducedStatus('${g.id}')" class="mt-4 w-full py-3.5 rounded-2xl font-black text-base sm:text-lg flex items-center justify-center gap-2 transition active:scale-[0.98] shadow-sm ${
+                            isDone
+                                ? 'bg-stone-200 hover:bg-stone-300 text-stone-700'
+                                : 'bg-gradient-to-r from-emerald-700 to-emerald-600 hover:from-emerald-600 hover:to-emerald-500 text-white shadow-emerald-900/20'
+                        }">
+                            <i class="ph-bold ${isDone ? 'ph-arrow-u-up-left' : 'ph-check-circle'} text-xl"></i>
+                            <span>${isDone ? '已介紹完畢（點擊恢復待介紹）' : '標記為「已介紹」'}</span>
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ==========================================
+        // 統計數據與全域畫面更新
+        // ==========================================
+        function updateAllViews() {
+            const total = guestsData.length;
+            const introduced = guestsData.filter(g => g.introduced).length;
+            const pending = total - introduced;
+
+            // 首頁統計
+            const homeTotal = document.getElementById('home-total-count');
+            const homePending = document.getElementById('home-pending-count');
+            if (homeTotal) homeTotal.textContent = total;
+            if (homePending) homePending.textContent = pending;
+
+            // 簽到處管理統計
+            const statTotal = document.getElementById('stat-total');
+            const statPending = document.getElementById('stat-pending');
+            const statIntroduced = document.getElementById('stat-introduced');
+            if (statTotal) statTotal.textContent = total;
+            if (statPending) statPending.textContent = pending;
+            if (statIntroduced) statIntroduced.textContent = introduced;
+
+            // 校長端徽章統計
+            const pPending = document.getElementById('p-badge-pending');
+            const pIntroduced = document.getElementById('p-badge-introduced');
+            const pAll = document.getElementById('p-badge-all');
+            if (pPending) pPending.textContent = pending;
+            if (pIntroduced) pIntroduced.textContent = introduced;
+            if (pAll) pAll.textContent = total;
+
+            if (currentMode === 'staff') {
+                renderStaffList();
+            } else if (currentMode === 'principal') {
+                renderPrincipalList();
+            }
+        }
+
+        // ==========================================
+        // 測試範例資料與 CSV 匯出
+        // ==========================================
+        window.seedSampleData = function() {
+            const now = Date.now();
+            const samples = [
+                { id: 'sample_1_' + now, organization: '宜蘭縣政府教育處', title: '處長', name: '簡信斌', category: '長官貴賓', note: '代表縣長蒞臨致詞祝賀', introduced: false, checkInTime: now - 300000 },
+                { id: 'sample_2_' + now, organization: '礁溪鄉公所', title: '鄉長', name: '張永德', category: '長官貴賓', note: '長期支持本校特色社團發展', introduced: false, checkInTime: now - 240000 },
+                { id: 'sample_3_' + now, organization: '玉田國小家長會', title: '會長', name: '林志明', category: '家長會/校友', note: '贊助本次校慶全體師生紀念品', introduced: false, checkInTime: now - 180000 },
+                { id: 'sample_4_' + now, organization: '礁溪國民小學', title: '校長', name: '李明哲', category: '友校校長', note: '鄰近友校代表', introduced: true, checkInTime: now - 120000 }
+            ];
+
+            samples.forEach(s => {
+                knownGuestIds.add(s.id);
+                guestsData.unshift(s);
+                pushToGoogleSheets('add', s);
+            });
+
+            saveGuestsToLocal();
+            updateAllViews();
+            showToastMessage("已填入 4 筆校慶測試貴賓資料！");
+        };
+
+        window.exportToCSV = function() {
+            if (guestsData.length === 0) {
+                showToastMessage("目前沒有來賓資料可匯出", "error");
+                return;
+            }
+
+            const headers = ['報到時間', '貴賓類別', '單位/服務機關', '職稱', '來賓姓名', '介紹狀態', '備註/介紹重點'];
+            const rows = guestsData.map(g => [
+                formatTime(g.checkInTime),
+                g.category,
+                g.organization,
+                g.title,
+                g.name,
+                g.introduced ? '已介紹' : '待介紹',
+                g.note || ''
+            ]);
+
+            const csvContent = '\uFEFF' + [headers, ...rows]
+                .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+                .join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            const dateStr = new Date().toISOString().slice(0, 10);
+            link.href = url;
+            link.download = `玉田國小校慶來賓簽到名單_${dateStr}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            showToastMessage("已匯出 Excel 相容 CSV 簽到名單！");
+        };
+
+        // ==========================================
+        // 通知橫幅與工具函式
+        // ==========================================
+        let systemMsgTimer = null;
+        function showToastMessage(msg, type = 'success') {
+            const box = document.getElementById('system-message');
+            const icon = document.getElementById('system-message-icon');
+            const text = document.getElementById('system-message-text');
+            if (!box || !text) return;
+
+            text.textContent = msg;
+            if (type === 'error') {
+                icon.className = 'ph-fill ph-warning-circle text-amber-400 text-2xl shrink-0';
+            } else {
+                icon.className = 'ph-fill ph-check-circle text-emerald-400 text-2xl shrink-0';
+            }
+
+            box.classList.remove('hidden');
+            if (systemMsgTimer) clearTimeout(systemMsgTimer);
+            systemMsgTimer = setTimeout(() => {
+                box.classList.add('hidden');
+            }, 3500);
+        }
+
+        let newGuestToastTimer = null;
+        function showNewGuestToast(guest) {
+            const banner = document.getElementById('new-guest-toast');
+            const info = document.getElementById('toast-guest-info');
+            if (!banner || !info) return;
+
+            info.textContent = `${guest.organization} ${guest.title} ${guest.name}`;
+            banner.classList.remove('hidden');
+
+            if (newGuestToastTimer) clearTimeout(newGuestToastTimer);
+            newGuestToastTimer = setTimeout(() => {
+                banner.classList.add('hidden');
+            }, 6000);
+        }
+
+        window.dismissToast = function() {
+            const banner = document.getElementById('new-guest-toast');
+            if (banner) banner.classList.add('hidden');
+        };
+
+        function formatTime(timestamp) {
+            if (!timestamp) return '';
+            const d = new Date(Number(timestamp));
+            if (isNaN(d.getTime())) return '';
+            const hh = String(d.getHours()).padStart(2, '0');
+            const mm = String(d.getMinutes()).padStart(2, '0');
+            return `${hh}:${mm}`;
+        }
+
+        function escapeHTML(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // 啟動應用程式
+        window.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
