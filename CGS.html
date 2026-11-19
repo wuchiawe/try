@@ -1,1389 +1,353 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>玉田國小｜校慶來賓簽到系統</title>
-    <!-- 引入 Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入 Google Fonts: Noto Sans TC 與 Noto Serif TC 營造典雅校慶氛圍 -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@600;700;900&display=swap" rel="stylesheet">
-    <!-- 引入 Phosphor Icons 圖示庫 -->
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['"Noto Sans TC"', 'sans-serif'],
-                        serif: ['"Noto Serif TC"', 'serif'],
-                    },
-                    colors: {
-                        crimson: {
-                            800: '#991b1b',
-                            900: '#7f1d1d',
-                            950: '#450a0a',
-                        },
-                        gold: {
-                            400: '#fbbf24',
-                            500: '#f59e0b',
-                            600: '#d97706',
-                        },
-                        academy: {
-                            800: '#166534',
-                            900: '#14532d',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        /* 自定義捲軸與微動畫 */
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-        @keyframes pulse-border {
-            0%, 100% { border-color: rgba(245, 158, 11, 0.4); }
-            50% { border-color: rgba(245, 158, 11, 1); }
-        }
-        .new-guest-highlight {
-            animation: pulse-border 2s infinite;
-        }
-    </style>
-</head>
-<body class="bg-stone-100 text-stone-800 min-h-screen flex flex-col selection:bg-amber-200 selection:text-red-900">
-
-    <!-- 頂部全域導覽列 (進入模式後顯示) -->
-    <header id="top-navbar" class="hidden sticky top-0 z-40 bg-red-950 text-white shadow-lg border-b-2 border-amber-500">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-full bg-amber-500 text-red-950 flex items-center justify-center font-serif font-black text-lg shadow-inner">
-                    玉
-                </div>
-                <div>
-                    <h1 class="font-serif font-bold text-base sm:text-lg tracking-wide text-amber-100 leading-tight">玉田國小｜校慶來賓簽到</h1>
-                    <p id="current-mode-badge" class="text-xs text-amber-400 font-medium flex items-center gap-1">
-                        <span id="nav-sync-dot" class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span>
-                        <span id="mode-label-text">雲端資料庫已連線</span>
-                    </p>
-                </div>
-            </div>
-            <div class="flex items-center gap-2">
-                <button onclick="openCloudSettingsModal()" class="px-3 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 active:scale-95 text-amber-300 border border-amber-400/50 text-xs sm:text-sm font-bold flex items-center gap-1.5 transition shadow-sm">
-                    <i class="ph-bold ph-cloud-arrow-up text-base"></i>
-                    <span class="hidden sm:inline">雲端同步設定</span>
-                    <span class="sm:hidden">雲端設定</span>
-                </button>
-                <button onclick="switchMode('home')" class="px-3 py-2 sm:px-4 sm:py-2 rounded-xl bg-red-900 hover:bg-red-800 active:scale-95 text-amber-100 border border-amber-500/40 text-xs sm:text-sm font-bold flex items-center gap-1.5 transition shadow-sm">
-                    <i class="ph ph-arrows-left-right text-base text-amber-400"></i>
-                    <span>切換模式</span>
-                </button>
-            </div>
-        </div>
-    </header>
-
-    <!-- 新貴賓即時提示橫幅 (校長端專用) -->
-    <div id="new-guest-toast" class="hidden fixed top-20 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-md bg-amber-500 text-red-950 px-4 py-3 rounded-2xl shadow-2xl border-2 border-white flex items-center justify-between transition-all duration-300">
-        <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-red-900 text-amber-300 flex items-center justify-center shrink-0">
-                <i class="ph-fill ph-bell-ringing text-xl animate-bounce"></i>
-            </div>
-            <div>
-                <p class="text-xs font-bold uppercase tracking-wider text-red-900">新貴賓報到！</p>
-                <p id="toast-guest-info" class="font-black text-base leading-tight">宜蘭縣政府 縣長 林姿妙</p>
-            </div>
-        </div>
-        <button onclick="dismissToast()" class="p-2 rounded-lg hover:bg-amber-600/30 text-red-950">
-            <i class="ph ph-x text-lg font-bold"></i>
-        </button>
+<!doctype html>
+<html lang="zh-Hant"><head><script>window["__codeletBootstrap__"]=JSON.parse('{"A":"A","B":"20261119-03-774dcf6","C":{"ABeeZee":"YADK31-VBBc,1","Abel":"YAHO2Ehol3g,0","Abhaya Libre":"YAFdJvwa-l0,0","Abril Fatface":"YACgEZbkUVE,0","Aclonica":"YAHO2OEKYj0,0","Acme":"YAHO2Gflqzo,0","Actor":"YAHO2N0IV_4,0","Adamina":"YAHO2Ko8ddg,0","Advent Pro":"YAFdJvNZdCk,0","Afacad":"YAHO2HaK_fU,0","Afacad Flux":"YAHO2DjbA6Y,0","Agrandir":"YAFdJpYuLss,0","Agrandir Grand":"YAFdJnQq22A,0","Aileron":"YAFdJn5d8s0,0","Akshar":"YAGWNF0jApg,0","akzidenz-grotesk":"YAFcfhwp99E,0","Alata":"YAD1aLikJo8,0","Albert Sans":"YAHO2HRfeh4,0","Alegreya":"YAFdJs07v-8,0","Alegreya Sans":"YAFdJvgJ5TU,0","Alegreya Sans SC":"YAFdJuaTEaM,0","Alegreya SC":"YACgEen8jXo,0","Aleo":"YAFdJg_txOU,0","Alex Brush":"YAE2gr0Mbng,0","Alexandria":"YAGVt-AWBcU,0","Alfa Slab One":"YACgEYS9sJU,0","Alice":"YALBszUSD-E,0","Alike":"YACgEdeqDWI,0","Allison":"YAG5KfE49h8,0","Allura":"YACgEap1YR0,0","Almarai":"YAFdJuZe0mI,0","Almendra":"YAHO2Dyhotk,0","Alumni Sans":"YAHO2DByoho,0","Alyamama":"YAHMLFefkMM,0","Amaranth":"YACgEaBTFMQ,0","Amatic SC":"YACgEbSBm0k,0","Amiri":"YAEWgjWFb1M,0","Amiri Quran":"YAHO2Enz6cg,0","Amita":"YADK309xYYo,1","Andika":"YACkoFAye4w,0","Anek Bangla":"YAGVuloYrvI,0","Anek Gujarati":"YAHO2NTD_LM,0","Anek Latin":"YAHO2C6lVnU,0","Anek Malayalam":"YAHO2JwdTAg,0","Anek Telugu":"YAHO2KVu8lI,0","Angsana New":"YAFcflTHDNQ,0","Anonymous Pro":"YACgEV9owk4,0","Antic":"YACgEeT8btw,0","Antic Didone":"YADK37j5kj0,0","Antic Slab":"YAHO2HJeTP0,0","Anton":"YACgEcYqQ-A,0","Antonio":"YAFdJjZxcpY,0","Anuphan":"YAHO2IhZ4E0,0","Anybody":"YAHO2MTsics,0","Aptos":"YAGi2jFvvq4,1","Arapey":"YADK32AK2Uk,1","Arbutus Slab":"YADK3z8rjvs,0","Architects Daughter":"YACgEc9BFCs,0","Archive":"YAD0s3O1iG4,1","Archivo":"YAHO2-t-jNE,0","Archivo Black":"YACgEZulLoA,0","Archivo Narrow":"YACgEa-oJH8,0","Aref Ruqaa":"YAHO2NMqGdM,0","Arial":"YAGyDvJ_4Ts,0","Arial Nova":"YAFcflVm6HM,0","Arima":"YAHMLEO2aZY,0","Arimo":"YACgEZ1cb1Q,0","Arsenal":"YADK3_DWcOc,0","Arsenal SC":"YAHO2BfKrb0,0","Arvo":"YACgEf17hXM,0","Asap":"YAFdJr0OaFw,0","Asap Condensed":"YAD1fmY3NpE,0","Assistant":"YAFdtfahXt8,0","Asul":"YAHO2ADJIM8,0","Athiti":"YAFdJnV1R9U,0","Atkinson Hyperlegible":"YAFge7Z-F6s,0","Atkinson Hyperlegible Mono":"YAHO2IygCXM,0","Atkinson Hyperlegible Next":"YAHO2IeQVB0,0","Audiowide":"YAHO2MsoafU,0","Avenir":"YAFcfmNq6UY,0","Average":"YAHO2OL2sMo,0","Azeret Mono":"YAHO2EIdDP0,0","B612":"YAD1b-1Hfc8,0","Bacasime Antique":"YAHO2JjJq4o,0","Bad Script":"YADK31ojH6A,1","Bagel Fat One":"YAFyG3A11Bw,0","Bai Jamjuree":"YAFdJjI5olU,0","Ballet":"YAGXhJ7-dYY,0","Baloo 2":"YAHO2IcQUcM,0","Baloo Bhai 2":"YAHO2IFnsSQ,0","Baloo Bhaijaan 2":"YAHO2NwTj3Y,0","Baloo Chettan 2":"YAHO2M8yj2k,0","Baloo Da 2":"YAHO2LicHPY,0","Baloo Paaji 2":"YAHO2NEYVDY,0","Baloo Tamma 2":"YAHO2H3zy38,0","Baloo Thambi 2":"YAHO2FzxyTU,0","Balsamiq Sans":"YAE3C_w4eo8,0","Bangers":"YAD5qTdjGKo,1","Barlow":"YAFdJsyuOPM,1","Barlow Condensed":"YAFdJljEuFc,0","Barlow Semi Condensed":"YAFdJu55qXI,0","Baskervville":"YAHO2JTYNKo,0","Be Vietnam":"YAFdJvSWHmc,0","Beau Rivage":"YAHO2NDDGu0,0","Bebas Neue":"YACgESME5ew,0","Belanosima":"YAHO2KW8vyU,0","Bellefair":"YADSJ8TFXwA,0","Belleza":"YADK3w_fTc4,0","Bellota Text":"YAHO2JzigLo,0","BenchNine":"YAHO2Gl7yMc,0","Bentham":"YADK3_BbjXo,0","Berkshire Swash":"YACgEa7uPMI,0","Besley":"YAHO2BTXWYc,0","Beth Ellen":"YAD1b5m4a2U,0","Bevan":"YACkoDaMIbc,0","Big Shoulders Display":"YAFdJs8L2aw,0","BioRhyme":"YAHO2OnVvkA,0","Birthstone":"YAGXhLyeE6I,0","Biryani":"YAFdtZ_PRAs,0","Bitter":"YACkoOF0Xck,0","BIZ UDPGothic":"YAGWY3VAK4Q,0","Black Mango":"YAFdJkJYP7I,1","Black Ops One":"YACgEaY4FIU,0","Blinker":"YAFdJoBYX9o,0","Bodoni Moda":"YAHO2C7VUJE,0","Boldonse":"YAHXbGMR2YM,0","Boogaloo":"YAHO2MTwH5g,0","Borel":"YAFyL1DOvfo,0","Bowlby One":"YAHO2EunPos,0","Bowlby One SC":"YAHO2J38FUs,0","Braah One":"YAHO2Ag4_wQ,0","Brake":"YAECFhPpDI8,0","Breathing":"YAEl409VGBQ,0","Bree Serif":"YACkoD1yZN0,0","Bricolage Grotesque":"YAFyMcdwzpc,0","Bricolage Grotesque Condensed":"YAFyMaVjTlw,0","Brightwall":"YAEl49DnZBU,0","Browallia New":"YAFcf0GWFlE,0","Bruno Ace SC":"YAHO2BP7y3k,0","Bubblegum Sans":"YAHO2JdFc_U,0","Bungee":"YALBszL9wLA,0","Bungee Outline":"YALBsyhE_6k,0","Bungee Shade":"YACkoPYyrRk,0","Cabin":"YAFdJnEgsb0,0","Cabin Condensed":"YAHO2F-FVVw,0","Cairo":"YAFdtXpDzlQ,0","Cal Sans":"YAHO2GqQss4,0","Caladea":"YAD1hHx0kVU,0","Calibri":"YAFcfhdOoGk,0","Calistoga":"YAD1aIFxe3I,1","Cambria":"YAFcfgNlM2Y,0","Cantarell":"YAHO2LSCGX4,0","Canva Sans":"YAFdJjTk5UU,1","Canva Sans Display":"YAFTjyMT8Hc,0","Caprasimo":"YAHO2PYTkbo,0","Capriola":"YALBs4liG7k,0","Cardo":"YACkoGIT9qo,0","Carlito":"YACkoIZXsrc,0","Carter One":"YACgEZJ1Flw,0","Cascadia Code":"YAHO2TBzHlE,0","Cascadia Mono":"YAHO2QKvf6g,0","Castoro":"YAHO2cDcmVM,0","Catamaran":"YAFdJhPTLAc,0","Catchy Mager":"YAEZxhW1Plk,0","Caveat":"YALBs2ploWQ,0","Caveat Brush":"YALBs8ZVRhw,0","Cedarville Cursive":"YAHO2UrHGFQ,0","Century Gothic Paneuropean":"YAFcfhkwO-0,0","Chakra Petch":"YAD1fCkY3IQ,0","Changa":"YAFdJtbG8fw,0","Changa One":"YAHO2WdsbtM,0","Chango":"YADK37RW0po,0","Charis SIL":"YAGvf-G3GGU,0","Charm":"YAD1b_s4o-w,0","Chelsea Market":"YAHO2UOd5sY,0","Cherry Bomb One":"YAFyMfi5fyQ,0","Cherry Swash":"YAHO2RnHe3o,0","Chewy":"YACgEZfALnA,0","Chiron GoRound TC":"YAHO2Vkw-3A,0","Chivo":"YAHO2WvGfDs,0","Chivo Mono":"YAHO2Qd3y5g,0","Chocolate Classical Sans":"YAHO2Rxoh6A,0","Chonburi":"YALBsz_RTwU,0","Cinzel":"YACgEeV8bIQ,0","Cinzel Decorative":"YAEe9XbWpNs,0","Circe":"YAEw10H5958,0","Clear Sans":"YAFdJoLIdPI,0","Climate Crisis":"YAFdJnbiwgQ,0","Cocomat Pro":"YAFdJu9rg-E,0","Coiny":"YACkoOrpjtg,0","Comfortaa":"YAFdJoWmhxU,0","Comic Neue":"YAHO2VMiyZo,0","Comic Sans MS":"YAFcfvtOAUY,1","Coming Soon":"YACgEQDqBLk,0","Commissioner":"YAHO2RRI-KE,0","Concert One":"YAFyG1vOkaw,0","Consolas":"YAFcfu6YYdE,0","Cookie":"YAHO2TxA9Mk,0","Cooper Hewitt":"YAFdJsxY6B0,0","Corben":"YADK3waYnkQ,2","Cordia New":"YAFcf2VdcIk,0","Cormorant Garamond":"YAFdJhX-538,0","Cormorant Infant":"YAHO2cgbXjc,0","Cormorant SC":"YAFdJg7KuRM,0","Cormorant Unicase":"YAHO2b4ohVo,0","Cormorant Upright":"YAHO2ZEBi5c,0","Courgette":"YACgEU5nS9M,0","Courier New":"YAGzXiGs0_8,0","Courier Prime":"YAD1aFjegN8,0","Cousine":"YADK35VyDYU,0","Covered By Your Grace":"YAHO2drjx38,0","Crete Round":"YAHO2Uu9SvI,0","Crimson Pro":"YAFdJsEGkW0,0","Crimson Text":"YAHO2RsfBzg,0","Cuprum":"YACkoB3fESg,0","Cutive":"YADK334gwRI,0","Cutive Mono":"YAHO2cov6H4,0","Damion":"YAHO2SxDErM,0","Dancing Script":"YALBs2pfuW0,0","Darker Grotesque":"YAD1acp_tgc,1","David Libre":"YAFdJop2L90,0","DejaVu Sans":"YAFdtfpl0Yc,0","Delius":"YAHO2f1B8B4,0","Dhurjati":"YAHO2RElIME,0","Didact Gothic":"YALBs-mIj2o,0","DM Mono":"YAHO2SGpw0w,0","DM Sans":"YAD1aU3sLnI,0","DM Serif Display":"YAD1aYG82rc,0","Domine":"YAHO2bbCOA4,0","Dongle":"YAGXDU1dmuc,0","Doppio One":"YAHO2ckhWaI,0","Dosis":"YAFdte3F-n0,1","DotGothic16":"YAHO2fxQNHM,0","Droid Arabic Naskh":"YACkoKkaqXA,0","Droid Serif":"YACgEdYQidM,0","DynaPuff":"YAFyMRnxBDs,0","East Sea Dokdo":"YAHO2V39uyM,0","Eater":"YAHO2VpLF0c,0","EB Garamond":"YAFdJtfMD6Y,0","Economica":"YACgEeIOo5w,0","Eczar":"YAFdJrnVElk,0","Edo":"YADoUIDNzaE,1","Edu NSW ACT Cursive":"YAHO2UbwD8o,0","Edu SA Beginner":"YAHO2bMcrTo,0","El Messiri":"YAFdJoZarj8,0","Electrolize":"YAHO2RdxxhE,0","Elsie":"YAHO2XlmbCo,0","Encode Sans":"YAHO2R-vLyo,0","Encode Sans Condensed":"YAHO2RQWhbg,0","Epilogue":"YAHO2WWHRqI,0","Exo":"YAHO2c15ncY,0","Exo 2":"YAFdJor4M6A,1","Faculty Glyphic":"YAHO2ZuH1NQ,0","Fahkwang":"YAFdJp0SJos,0","Familjen Grotesk":"YAHO2ZriIzU,0","Fauna One":"YAHO2Y8x8zg,0","Faustina":"YAFdJnqy8Oc,0","feather":"YAFdJjALMPk,0","Figtree":"YAHO2b-mV7A,0","Finger Paint":"YADK3wExL94,0","Fira Code":"YAFdJsxBlTg,0","Fira Mono":"YAHO2bTKfjg,0","Fira Sans":"YAFdJnJKOPE,0","Fira Sans Condensed":"YAHMLJN-FcA,0","Fira Sans Extra Condensed":"YAHMLGqUb6Q,0","Fjalla One":"YAHO2VMyTKw,0","Fondamento":"YAHO2X_okmA,0","Forum":"YACgEcnnqB4,0","Fragment Mono":"YAHO2ZlYXZc,0","Francois One":"YADK3zbC6RM,0","Frank Ruhl Libre":"YAFdJiGIKxQ,0","Fraunces":"YAFdJpU7Kkk,0","Freckle Face":"YALBszwFbJg,0","Fredoka":"YACgEZml080,0","Freehand":"YACkoAZmUSg,0","Frutiger":"YAFcf7IGSfk,0","Fugaz One":"YAHO2f5L5K0,0","Funnel Display":"YAHO2TmVuEs,0","Funnel Sans":"YAHO2R0FK5U,0","Futura":"YAFcfgcNhWk,3","Gabarito":"YAHO2cD3JmI,0","Gaegu":"YAFdJj615Ls,0","Gamja Flower":"YADK39n_eyc,0","Gantari":"YAHO2WveuBo,0","Garamond":"YAFcfhlhK9c,0","Garet":"YAFdJi-0PQg,0","Gasoek One":"YAFyMaznfGo,0","Geist":"YAHO2SfKS30,0","Geist Mono":"YAHO2XOe8v8,0","Gelasio":"YAHO2e426-k,0","Gentium Book Plus":"YAHO2b-adyU,0","Gentium Plus":"YAGvf3_u0_Q,0","Geologica":"YAHMLpZ3y5c,0","Geom":"YAHMLFz7unQ,0","Georama":"YAHO21l9KR8,0","Georgia":"YAGzXkO0pEM,0","GFS Didot":"YADK39vXpyU,0","Gilda Display":"YADK34sD2QM,0","Gill Sans":"YAFcfnt9wqI,0","Gilroy":"YAFcf0f10mQ,0","Gistesy":"YAEEKKQrAAg,0","Glacial Indifference":"YACgETiWKS8,0","Gloock":"YAHO2WVhd0Q,0","Gloria Hallelujah":"YALBs50JjRs,0","Gochi Hand":"YACgEWWPgRQ,0","Gogol":"YAEw1oJoCwQ,0","Golden Hopes":"YAHNdVsGdn0,0","Goldman":"YAHO2TATES8,0","Golos Text":"YAHO2QlqAQk,0","Google Sans":"YAHO2dYZ4Uw,0","Google Sans Code":"YAHO2XdQwlA,0","Google Sans Flex":"YAHO2e8mtck,0","Gordita":"YAFdJpAlwLA,0","Gotham":"YAFcfr0ZwUA,0","Gotu":"YAEZNa_UrWs,0","Goudy Bookletter 1911":"YAHO2X7CqQQ,0","Gowun Batang":"YAGXDQtk-ic,0","Gowun Dodum":"YAGXDZ921io,0","Graduate":"YACgEajwz7Y,0","Grand Hotel":"YACgEckzDrA,0","Grandstander":"YAHO2bN2hd8,0","Gravitas One":"YAHO2WtqHRw,0","Great Vibes":"YACgEX27qLg,0","Grenze":"YAFdJpFWOZM,0","Grenze Gotisch":"YAHO2fI_o94,0","Gruppo":"YACgEbcz8MU,0","Gudea":"YAHO2WlVs30,0","Gugi":"YADK3-knzio,0","Hahmlet":"YAGXDTqs4Ac,0","Hammersmith One":"YACgEWNFnT4,0","Handlee":"YAHO2U9C-xI,0","Hanken Grotesk":"YAHO2VB9G0I,0","Heebo":"YAFdJqqaebw,0","Helvetica":"YAFcf7zkXN0,0","Helvetica Now Display":"YAFcfyB4XC8,0","Henny Penny":"YAHO2dlXoyw,0","Hepta Slab":"YAD1cDjjTFA,0","Hind Guntur":"YAFdJq1FbIc,0","Hind Madurai":"YAFdJtsMgQk,0","Hind Siliguri":"YAFdJodBWQk,0","Hind Vadodara":"YAFdJrnuAas,0","HK Grotesk":"YAFdJsjyMsM,0","Homemade Apple":"YADK3zBTjLs,0","Host Grotesk":"YAHO2VztvdY,0","Hubot Sans":"YAHO2cDVt0E,0","Huninn":"YAHO2dG1YxU,0","Ibarra Real Nova":"YAD1aDS1Jq8,0","IBM Plex Mono":"YAFdJkmvhGI,0","IBM Plex Sans":"YAFdJgT0SHI,0","IBM Plex Sans Arabic":"YAGVuEYCNg0,1","IBM Plex Sans Condensed":"YAFdJrPBof8,0","IBM Plex Sans JP":"YAGWY6rvaqo,0","IBM Plex Sans KR":"YAGXDbUrwEo,0","IBM Plex Sans Thai":"YAFdJkdZC28,0","IBM Plex Sans Thai Looped":"YAFdJui2sXU,0","IBM Plex Serif":"YAFdJt16xgA,0","IM Fell English":"YAHO2QB0QVo,0","IM Fell English SC":"YACgERmrc6I,0","IM Fell French Canon":"YAHO2bMvABs,0","Imbue":"YAGjgA104ww,0","Impact":"YAFcfnjI7Vk,0","Imperial Script":"YAHO2bXM53E,0","Inclusive Sans":"YAGzRvSP2H0,0","Inconsolata":"YAHO2SpO-5g,0","Indie Flower":"YAHO2aaUih8,0","Inria Sans":"YAHO2WaGA6A,0","Inria Serif":"YAD1aHa0r9w,0","Instrument Sans":"YAHO2bKyaSQ,0","Instrument Serif":"YAHFeOnZNEk,0","Intel One Mono":"YAHO2RYNRUQ,0","Inter":"YAFdJvSyp_k,3","Inter Tight":"YAHO2Wv04Hw,0","Istok Web":"YAHO2XNFLkI,0","Italiana":"YAHO2Toik_w,0","Italianno":"YADK33wZXP4,1","ITC Bauhaus":"YAFcfpZDFTo,0","Itim":"YAE0Z3ly4AQ,0","JA Jayagiri Sans":"YAEaXF9noCA,0","Jacques Francois":"YAHO2a5g66Q,0","Jersey 10":"YAHO2QXCPBA,0","Jersey 25":"YAHO2b0HdSo,0","JetBrains Mono":"YAFdJksXcAk,0","Jolly Lodger":"YAHO2U5HCA0,0","Josefin Sans":"YAFdJjvw9Ps,0","Josefin Slab":"YACgEQmaEIc,0","Jost":"YAHO2TSelXg,0","Jua":"YADK3-gZSDU,0","Judson":"YAHO2Te3_As,0","Julius Sans One":"YACgET-7cBI,0","Jura":"YAFdJmtyccY,0","K2D":"YAFdJm3q9Nw,0","Kadwa":"YALBswebFy8,0","Kaisei Decol":"YAGWY5xJxfk,0","Kalam":"YAFdJrEg2ic,0","Kalnia":"YAHO2ZebSDE,0","Kanit":"YAHO2TvSf7E,0","Kantumruy Pro":"YAHO2SVqwqY,0","Karantina":"YAHO2TVXfmM,0","Karla":"YAHO2V2NSXM,0","Kaushan Script":"YACgEbGmrJs,0","Khand":"YAFdJm18w3g,0","Khula":"YAFdJvaOkWI,0","Kiwi Maru":"YAFdJmm1njU,0","Klee One":"YAHO2dadxts,0","Knewave":"YACgEYSBEEA,0","Kodchasan":"YAFdJmfmzeo,0","Kosugi Maru":"YAEhL82apSM,0","Kreon":"YAHO2b-Z620,0","Kristi":"YAHO2bHz8po,0","Krona One":"YAHO2byEKN4,0","Krub":"YAFdJl9ACwk,0","Kufam":"YAGVuJN9X7k,0","Kulim Park":"YAHO2VNx1jc,0","Kumbh Sans":"YAHO2UjzjpM,0","La Belle Aurore":"YAHO2QKdLHU,0","Lalezar":"YACkoB188Y0,0","Lancelot":"YADK4HPrVfg,0","Lateef":"YADSJ_Lazxc,0","Lato":"YAFdJuFCnaw,0","LazyDog":"YAEK94THsCY,1","League Gothic":"YACgEZ1OEPI,0","League Spartan":"YACgEcnJpjs,0","Leckerli One":"YAGX4ddZAAg,0","Lemonada":"YAFdtQVfQCk,0","Lexend":"YAHO2SCkHoU,0","Lexend Deca":"YAD9UdTHECk,0","Lexend Exa":"YAD9UUZHL7I,0","Lexend Giga":"YAD9UYAqrOc,0","Lexend Mega":"YAD9UdrjgZw,0","Lexend Peta":"YAD9UbAW09Y,0","Lexend Zetta":"YAD9UYrErMw,0","Liberation Sans":"YACkoCpVbHs,0","Libertinus Sans":"YAHMLfZwtOs,0","Libre Baskerville":"YACgEUFdPdA,0","Libre Bodoni":"YAHO2fbN094,0","Libre Caslon Display":"YAHO2XhLmt0,0","Libre Caslon Text":"YAHO2USylHk,0","Libre Franklin":"YAFdJr3SNlU,1","Lilita One":"YACgEblklxo,0","Limelight":"YACgEUpkTXE,0","LINE Seed JP":"YAHO2d8yXa4,0","Literata":"YAD1b0SpOHQ,0","Literaturnaya":"YAEw2PHBjL0,0","Livvic":"YAFdJiLU_Ko,0","Lobster":"YAD8SnSjSFI,0","Lobster Two":"YACgEesdoec,0","Londrina Solid":"YAFdJnyMeQE,0","Lora":"YACgEXvxf8Q,0","Love Ya Like A Sister":"YAHO2WqclmE,0","Lovelace Text":"YAEp6DuM3Gw,0","Lucida Console":"YAFcfpZCfh8,0","Luckiest Guy":"YADK4PnlFRs,0","Lusitana":"YAHO2SveFfM,0","Luxurious Script":"YAGXhP81m8s,0","LXGW WenKai TC":"YAHO2ehQ5_o,0","M PLUS 1p":"YAHO2fozO7I,0","M PLUS 2":"YAHO2RUGZcQ,0","Ma Shan Zheng":"YAD1b3yES34,0","Mada":"YAFd-HxC1Y0,0","Maitree":"YAFdJh4v5pY,0","Mali":"YAFdJh7OuNE,0","Mangal":"YAFcf3pCl6E,0","Manrope":"YAHO2b2feC4,0","Mansalva":"YAD1aZCCYU8,1","Manuale":"YAHO2XO6VM0,0","Manufacturing Consent":"YAHO2Tdy8YQ,0","Marcellus":"YADK4L2nGbg,0","Marck Script":"YALBs9DBETo,0","Marhey":"YAGVt3FsiJE,0","Martel":"YAFdtY7FRH8,1","Martel Sans":"YAFdJnFZE_o,0","Martian Mono":"YAHO2YhUMkk,0","Mate":"YAHO2eaPuMk,0","Maven Pro":"YAFdJgCyb_c,0","Mea Culpa":"YAHO2UQx4WU,0","MedievalSharp":"YAHO2XoH9qQ,0","Megrim":"YACgEQu0pLY,0","Meiryo":"YAGmJPEz0BM,0","Merienda":"YAGXhISLJkY,0","Merriweather":"YACgEXvHxxs,0","Merriweather Sans":"YAFdJorZgto,1","Metal Mania":"YAHO2RakMsk,0","Metamorphous":"YAHO2VZfQ20,0","Metropolis":"YAD02dnyUJ4,1","Michroma":"YADK4IYX8vY,0","Miriam Libre":"YADK4A2U8KA,0","Mitr":"YAFdJh-DKf0,0","Mochiy Pop One":"YAGWZBVNvyY,0","Modak":"YALBs_cEz8M,0","Mogra":"YACkoLlIQu0,0","Mohave":"YAHO2a-kB9g,0","Momo Trust Sans":"YAHO2WLKNS0,0","Mona Sans":"YAHO2XGz2BM,0","Monda":"YADK34lACd0,1","Monoton":"YALBs_hWWG8,0","Monsieur La Doulaise":"YAHO2ZDmLzM,0","Mont":"YAFdJgul-2U,0","Montserrat":"YAFdtQi73Xs,0","Montserrat Alternates":"YAHO2d5URdI,0","Monument":"YAFdJgp7PFE,0","Mooli":"YAHO2QudnvU,0","More Sugar":"YAFdJkVWBPo,1","Moul":"YADK4IOwXpw,0","Mountains of Christmas":"YAHO2f6R-YA,0","Mozilla Headline":"YAHO2ZZLh-k,0","Mr Dafoe":"YACgEbw4BXM,0","Mrs Saint Delafield":"YAHO2Tnt53k,0","Ms Madi":"YAHO2SBc4rI,0","Mukta":"YAFdJjsZaSM,0","Mukta Mahee":"YAFdtVEME6c,0","Muli":"YAFdtZAC0Mk,0","Mulish":"YAHO28rytyw,0","Muller":"YAFdJriKtFM,0","Nanum Myeongjo":"YAFdJqiu4VY,0","Neucha":"YAEkTBQffFg,0","Neue Machina":"YAFdJl3zAt0,0","Neue Montreal":"YAFdJqX996o,0","Neuton":"YAFdtcDBvdA,0","New Rocker":"YAHO2YI8rWg,0","News Cycle":"YACkoEMGWek,0","Newsreader":"YAHCYkWCns8,0","Niramit":"YAFdJhxYZW4,0","Nirmala UI":"YAFcf161eM0,0","Nixie One":"YACgEUtNgZc,0","Nosifer":"YAHO2cgIgOc,0","Nothing You Could Do":"YAHO2WqRm_c,0","Noticia Text":"YACkoDm0xlE,0","Noto Color Emoji":"YAGumpcTCok,0","Noto Kufi Arabic":"YACkoGW2dTA,0","Noto Naskh Arabic":"YACkoI8Oj1c,0","Noto Nastaliq Urdu":"YAGU_Q5u0w4,0","Noto Sans":"YACkoCjjZNk,0","Noto Sans Armenian":"YACkoI5u7HA,0","Noto Sans Balinese":"YAHO21bV1BM,0","Noto Sans Batak":"YAHO23YQ0_M,0","Noto Sans Bengali":"YAFdJjnhMdI,0","Noto Sans Canadian Aboriginal":"YAHK3L_wQZM,0","Noto Sans Display":"YAHO2eyZBeY,0","Noto Sans Egyptian Hieroglyphs":"YAHO2Tb1y28,0","Noto Sans Ethiopic":"YAHO20DfUMM,0","Noto Sans Georgian":"YACkoFKxqWs,0","Noto Sans Gujarati":"YACkoEDaawU,0","Noto Sans Gurmukhi":"YACkoNT6NTg,0","Noto Sans HK":"YAHO2fCytzw,0","Noto Sans Javanese":"YACkoNo3Bcw,0","Noto Sans JP":"YAFdJiHXlcI,0","Noto Sans Kannada":"YACkoIujelo,0","Noto Sans Khmer":"YACkoFdRIJM,0","Noto Sans KR":"YAGsojZj-RQ,0","Noto Sans Lao":"YAHO2f6jVpw,0","Noto Sans Lao Looped":"YAHO2TSQjpA,0","Noto Sans Malayalam":"YACkoMzSo98,0","Noto Sans Mono":"YAHO2TFVtN0,0","Noto Sans Myanmar":"YACkoPHEdMk,0","Noto Sans Oriya":"YAHO2TmiA1I,0","Noto Sans SC":"YAHO2hDCDFM,0","Noto Sans Sinhala":"YACkoJiU_Ak,0","Noto Sans Symbols":"YAHO2n0Zh0w,0","Noto Sans Tamil":"YAHO2r9jkew,0","Noto Sans TC":"YAHO2pzGHBE,0","Noto Sans Telugu":"YAHO2uFAQs4,0","Noto Sans Thaana":"YAHO2-c-brc,0","Noto Sans Thai Looped":"YAFdJqlG6-E,0","Noto Serif":"YACkoGNq-XY,0","Noto Serif Bengali":"YAGVuu_j8c8,0","Noto Serif Devanagari":"YAGWNWUpY9s,0","Noto Serif Display":"YAFdJllHsUM,0","Now":"YAFdJrJllfA,0","Numans":"YAHO2nkeXPA,0","Nunito":"YAFdJoNRMmU,1","Nunito Sans":"YAFdtQJYB9w,1","Odibee Sans":"YAD1aGo16Go,0","Old Standard TT":"YAHO2lhtDcg,0","Oleo Script":"YACgEQQ14jI,0","Onest":"YAHO2kaArOY,0","Open Sans":"YAFdJt8dAY0,1","Open Sans Condensed":"YAD7Rf0lmm4,1","Open Sans Hebrew":"YAFdJlARYMY,0","Optima":"YAFcf0Fltlg,0","Oranienbaum":"YALBs0MvhmA,0","Orbit":"YAFyMQm0Z54,0","Orbitron":"YAHO2tXXH_o,0","Oswald":"YACgEQY10lw,0","Outfit":"YAHO2nVlg14,0","Overpass":"YAFdJhmdIMM,1","Overpass Mono":"YAHO2kkv44I,0","Ovo":"YADK4JHqBpg,0","Oxanium":"YAHO2kINDn0,0","Oxygen":"YAHO2nOU31A,0","Pacifico":"YADLjORQ1u4,0","Padauk":"YACkoMjU4UU,0","Palanquin":"YAFdJkUV3N4,0","Palatino":"YAGLy64uiS8,4","Pangolin":"YADK4DH4-fM,0","Panton":"YAFdJg3DcRA,0","Parisienne":"YACgERSYqTw,0","Parkinsans":"YAHO2j-ZSEo,0","Passion One":"YAFdJo9cFec,0","Pathway Extreme":"YAHO2h3f3W0,0","Pathway Gothic One":"YACkoMQo7Mc,0","Patrick Hand":"YAHO2swKcgg,0","Patrick Hand SC":"YAHO2qmdhTY,0","Patua One":"YAHO2qRZWLE,0","Paytone One":"YALBs8J6By4,0","Perandory SemiCondensed":"YAFJsrsM0TY,0","Permanent Marker":"YACgEcB-r-s,0","Petit Formal Script":"YALBsw8cs24,0","Petrona":"YADK4PUbnVg,1","Philosopher":"YAEkTCvkg7Q,0","Phudu":"YAHO2vkIQEo,0","Ping":"YAEYXSRnkF0,0","Pinyon Script":"YACgEQzTJgs,0","Pirata One":"YALBs3j2Xx0,0","Pixelify Sans":"YAHO2v5ARTA,0","Play":"YADK4EFto8o,0","Playball":"YAHO2hWLQJ0,0","Playfair Display":"YAFdJhem5V8,1","Playfair Display SC":"YACgESE7eJQ,0","Playpen Sans":"YAGLNo9uX4s,1","Playwrite BR":"YAGNffc3m80,0","Playwrite ES":"YAHO202sEvg,0","Playwrite ID":"YAHO27jDFoE,0","Playwrite NZ Basic":"YAHO26KONyE,0","Playwrite VN":"YAHO2_bSM7Y,0","Plus Jakarta Sans":"YAHO2gdhi18,0","Poiret One":"YAHO2nweLas,0","Pontano Sans":"YAHO2t91rWw,0","Poppins":"YAFdJjbTu24,1","Potta One":"YAFShf6np94,0","Pragmatica":"YAEw1pyVaO0,0","Prata":"YACgES4qGnk,0","Press Start 2P":"YAFyGr-8pmQ,0","Pridi":"YAFdJmJ3gqA,0","Prompt":"YAFdJmA6sOY,0","Protest Riot":"YAGXhAFSAis,0","Proxima Nova":"YAFcfjveRFU,0","Proxima Nova Condensed":"YAFcfiSm_SA,0","Proza Libre":"YAHO2nv0NKc,0","PT Mono":"YAHO2lnK_7w,0","PT Sans":"YACgEYbsV-E,0","PT Sans Caption":"YAHO2oZpTQc,0","PT Sans Narrow":"YAHO2glZymI,0","PT Serif":"YACgEcU7Qg4,0","Public Sans":"YAFdJj8NdaU,1","Pyidaungsu":"YACkoGGC7sA,0","Quantico":"YAHO2me4bVc,0","Quattrocento":"YACgEcL5b3s,0","Quattrocento Sans":"YAHO2vuaC0Y,0","Questrial":"YADK4LSvvyE,1","Quicksand":"YAFdJpYtCxE,1","Racing Sans One":"YACgEbcqMPM,0","Radio Canada":"YAHO2qxyljs,0","Radio Canada Big":"YAHO2r7P8wg,0","Radley":"YADK4O60vp0,0","Rajdhani":"YAFdJoWaWgo,0","Rakkas":"YALBs9kmKNE,0","Raleway":"YAFdJhmxbVQ,1","Ramabhadra":"YACkoN_hhSs,0","Rammetto One":"YAHO2nAqWuQ,0","Rasa":"YAFdJg-9rGY,0","Readex Pro":"YAGVt3RBO3c,0","Recoleta":"YAFcf2ThYuU,2","Recursive":"YAHO2oZn01g,0","Red Hat Display":"YAD1bzs0p0Y,0","Red Hat Mono":"YAHO2gB0kV8,0","Red Hat Text":"YAHO21kkNWg,0","Reddit Sans":"YAHO2kKAR-8,0","Reem Kufi":"YADSJ0ceOYQ,0","Reenie Beanie":"YAHO2s4qTnk,0","Reggae One":"YAFyL1F3Y-4,0","Rethink Sans":"YAHO2q9_FzY,0","Righteous":"YAHO2oo4-So,0","Road Rage":"YAHO2o82hA4,0","Roboto":"YACgEev4gKc,0","Roboto Condensed":"YACgEan-tYE,0","Roboto Flex":"YAHO2nqK4E8,0","Roboto Mono":"YAFdJkvp3-k,0","Roboto Slab":"YAFdJswIKAg,0","Rochester":"YAHO2kOZ9jU,0","Rock Salt":"YAHO2vFSVxE,0","Rockwell":"YAFcfyVZnN0,0","Rockwell Condensed":"YAFcf0bsook,0","Rokkitt":"YAFdJnlBl3o,0","Ropa Sans":"YACkoCA_LhY,0","Rowdies":"YAFyL2wl4FI,0","Rozha One":"YACkoMIfZVA,0","Rubik":"YAFdJsMWVVc,0","Rubik Dirt":"YAFyHRD_ZDY,0","Rubik Glitch":"YAFyL0Ap4GM,0","Rubik Mono One":"YAHO2qtMuC0,0","Rubik Wet Paint":"YAHO2mLD_X0,0","Ruda":"YAFdJuuBNyM,1","Rufina":"YADK4FKO8Lg,0","Ruwudu":"YAGVt1otBOY,0","Rye":"YACgEdQP21k,0","Sacramento":"YACgEf5ivwU,0","Saira":"YAFdJk33d3s,0","Saira Condensed":"YAFdJuBuAxg,0","Saira Extra Condensed":"YAFdJiQUvWc,0","Saira Semi Condensed":"YAHO2gfd5g8,0","Saira Stencil One":"YAD1aV1l2HE,0","Sanchez":"YACgEbBJLy8,0","Sancreek":"YALBsyHedNY,0","Sansation":"YAFdJglRFbg,0","Sarabun":"YAFdJssSnME,0","Sarala":"YADK4LF5xeY,0","Satisfy":"YACgEf5XTk0,0","Sawarabi Mincho":"YAD1faq7yjk,0","Scheherazade New":"YAHO2sxcjiY,0","Schibsted Grotesk":"YAHO2sWydRk,0","Schoolbell":"YACgEZHPKsk,0","Segoe Script":"YAF3uTF1s5I,0","Segoe UI":"YAHNdRD1Klw,0","Sen":"YAHO2h5vrRE,0","Shadows Into Light":"YAHO2tztN1k,0","Shadows Into Light Two":"YACgEVD67CI,0","Shantell Sans":"YAFyGytbxDc,0","Share Tech":"YAHO2q4NPs0,0","Share Tech Mono":"YAHO2oHio98,0","Shippori Mincho":"YAGWZNRJkO8,0","Shippori Mincho B1":"YAGWZJnXF8c,0","Short Stack":"YAHO2lg7AII,0","Shrikhand":"YACkoEA0Kc0,0","Signika":"YACgEfiK7GI,0","Signika Negative":"YAHO2rWYEng,0","Silkscreen":"YAHO2rdlQ_o,0","Simonetta":"YADK4LfzWNc,0","Single Day":"YAGXDZBCspk,0","Sintony":"YAHO2kIBPTg,0","Sirivennela":"YAHO2ougDr8,0","Skranji":"YAHO2uPivlQ,0","Slabo 13px":"YAHO2hvaP1I,0","Slabo 27px":"YAHO2n--yeE,0","Slackey":"YAHO2iIaL7o,0","Smooch Sans":"YAHO2tPdb20,0","Snell Roundhand":"YAFcf-RMpoo,0","Sniglet":"YACgEUJSCy8,0","Sofia":"YAHO2kq3qHg,0","Sofia Sans":"YAHMLUINeco,0","Sofia Sans Condensed":"YAHMLQmSo-Y,0","Sofia Sans Extra Condensed":"YAHMLV0fp0c,0","Solway":"YAD1fewp_mA,3","Song Myung":"YADK4PZtE24,0","Sora":"YAHO2rDTR1E,0","Sorts Mill Goudy":"YADK4Fi0R2c,0","Source Code Pro":"YAHO2tzIJbg,0","Source Han Serif JP":"YAFdJgMJ6Bo,0","Source Sans 3":"YAG4lO1Mj10,0","Source Sans Pro":"YACgEQzTv38,0","Source Serif Pro":"YACgEfdj394,0","Space Grotesk":"YAHO2sjPCSM,0","Space Mono":"YADW1-vpsoc,0","Special Elite":"YACgEYVlm9Q,0","Special Gothic Expanded One":"YAHO2oaS0m0,0","Spectral":"YAHO2rVUHIM,0","Spectral SC":"YAHO2gamQtc,0","Spline Sans":"YAHO2rZC9CE,0","Squada One":"YADK4PDlAAM,0","Sriracha":"YALBs4sJbXs,0","Staatliches":"YAD1bzJCL-s,0","Stack Sans Headline":"YAHO2n0Qv4w,0","Stardos Stencil":"YADK4Mu_Xj0,1","STIX Two Text":"YAHO2joycuk,0","Style Script":"YAGLy2PgdK0,0","Sue Ellen Francisco":"YADK4OIbCxo,0","Suez One":"YACkoJMi7_c,0","Sunflower":"YAFdJtJhp3I,1","Suranna":"YADK4MB5J7A,0","SUSE":"YAHO2pLixnA,0","Syncopate":"YAHO2iXpgDY,0","Syne":"YAHML9oLRPc,0","Tahoma":"YAFcfipOFgg,0","Tajawal":"YAFdJg45t1g,0","TAN Meringue":"YAEwfQVqdIo,0","TAN Nimbus":"YAEwfdrEBqg,0","Tangerine":"YADK4L8oUVI,0","TASA Orbiter":"YAHO2umh_2o,0","Taviraj":"YAFdJjquxqU,0","Teko":"YAFdJsF6lbU,0","Tektur":"YAHMLdkk1tM,0","Telegraf":"YAFdJvl8raw,1","Tenor Sans":"YACgEVY5j_w,0","TH Sarabun New":"YACkoFu1RUU,0","The Seasons":"YAFdJnPX3ZE,0","The Youngest":"YAEtfuYOYZQ,1","thongterm":"YAHQupn3T8Q,0","TikTok Sans":"YAHO2of1C4s,0","Tilt Neon":"YAHO2vo8k8w,0","Tilt Warp":"YAHO2uqld84,0","Times":"YAGzXW3gftg,0","Times New Roman":"YAGzXW3gftg,0","Tinos":"YACkoJyNZF4,0","Tiro Bangla":"YAGVuiG7jnE,0","Tiro Devanagari Hindi":"YAGWNCjUq0o,0","Tiro Devanagari Marathi":"YAGWNO-IVTE,0","Tiro Devanagari Sanskrit":"YAGWNHzN1is,0","Tiro Telugu":"YAHO2nlia1k,0","Titan One":"YAHO2v8eA3A,0","Titillium Web":"YAFdtTOE9xo,0","Tomorrow":"YAFdJlW65k4,0","Traditional Arabic":"YAGLszSchGc,0","Trebuchet MS":"YAFcfrglpVA,0","Trirong":"YAFdJkEiIOI,0","Trocchi":"YACgEV-yq04,0","TT Backwards Script":"YAEnTERS7-o,0","TT Commons Pro":"YAEnTI0o408,0","TT Norms":"YAFdJoYMYSc,0","Turret Road":"YAHO2pKQLYQ,0","Ubuntu":"YACgERDU--Q,0","Ubuntu Condensed":"YAHO2nCaahY,0","Ubuntu Mono":"YAHO2g6B-Uo,0","Ubuntu Sans":"YAHO2kypvWc,0","Ultra":"YACgEWHSPx0,0","Unbounded":"YAHO2rkdmWY,0","Uncial Antiqua":"YAHO2gmfDAs,0","Unica One":"YALBs74Pdjc,0","UnifrakturCook":"YAHO2srzKxY,0","UnifrakturMaguntia":"YACgEZRHDPA,0","Unna":"YADK4PtOh7E,0","Urbanist":"YAHO2o1IFy0,0","Varela":"YAHO2gPi4IU,0","Varela Round":"YALBs2IK6rw,0","Vazir":"YAFdJkYF8Mg,0","Vazirmatn":"YAHO2z1lH5c,0","Verdana":"YAGzXTctYtQ,0","Verdana Pro":"YAFcf0Q1_fs,0","Vidaloka":"YACgEdRnAX0,0","Viga":"YAHO2v8Lzbg,0","Vivaldi":"YAFcf2k4GUc,0","Volkhov":"YAHO2uWq-qg,0","Vollkorn":"YAFdJli9wSA,0","VT323":"YACgEYI9BCI,0","Walter Turncoat":"YADK4Mm5Elo,0","WindSong":"YAGXhGUyKSQ,0","Wix Madefor Display":"YAHO2o-Qfis,0","Wix Madefor Text":"YAHO2rU16Qc,0","Work Sans":"YAGXhLOKv44,0","Xanh Mono":"YAHO2pYt2v0,0","Yaldevi":"YAHO2l1R4xo,0","Yanone Kaffeesatz":"YAFdtbpuM0E,0","Yantramanav":"YAFdJuZAcfY,0","Yatra One":"YACkoJ228Ho,0","Yellowtail":"YACgEYG4kG4,0","Yeon Sung":"YADK37OOtIA,0","Yeseva One":"YALBs4GWnJw,0","Yesteryear":"YALBs99Qer0,0","Ysabeau":"YAHMLjcdG48,0","Ysabeau Office":"YAHO2uUYDYI,0","Yuji Boku":"YAFGHcN5e_Y,0","Yuji Mai":"YAFGHYm9K5k,0","Yuji Syuku":"YAFFjuwaUks,0","Yusei Magic":"YAEhL8RNAMk,0","Zain":"YAHO2lC1Xkw,0","Zalando Sans":"YAHO2k5OK-M,0","Zalando Sans Expanded":"YAHO2h6OPds,0","ZCOOL KuaiLe":"YAD1b3Joj4Y,0","ZCOOL XiaoWei":"YAD1b1xytFY,0","Zen Antique Soft":"YAHO2k9Rm_4,0","Zen Kaku Gothic Antique":"YAHO2u8F_xk,0","Zen Kaku Gothic New":"YAHO2tS_yps,0","Zen Kurenaido":"YAFKDpCxcZ8,0","Zen Maru Gothic":"YAFdJgMrcdw,0","Zen Old Mincho":"YAHO2tMwaEs,0","Zeyada":"YAHO2lP62P0,0","Zilla Slab":"YAFdJpPotmI,0","궁서체":"YAGNIIhCWnU,2"},"D":"index.html"}');</script><script src="/_sdk/5d7be449459a1919.telemetry_sdk.js" integrity="sha512-gI0v/KQP0VahNTg1tZqvaHbZyHMglJnGLqFyyJlxNlPMMKeEJV1cRSplPxDO0+g45eZW0yrqsoDiYz3P/3VPRA=="></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>玉田國小｜校慶來賓簽到</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&amp;family=Fraunces:wght@600;700&amp;display=swap" rel="stylesheet">
+  <style>
+    :root { --ink:#173b32; --muted:#62776f; --gold:#bd8d46; --paper:#fffdf7; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:"Noto Sans TC",sans-serif; color:var(--ink); }
+    .app-shell { width:100%; min-height:100%; background:radial-gradient(circle at 90% 3%,#f8edcf 0,transparent 35%),#f5f3e9; }
+    .topband { background:#173b32; color:white; }
+    .ornament { width:42px;height:42px;border:2px solid #dfba77;transform:rotate(45deg);border-radius:10px;flex:none; }
+    .surface { background:var(--paper);border:1px solid #e7e3d5;box-shadow:0 12px 40px #173b3210; }
+    .action { background:#173b32;color:#fff;border-radius:12px;padding:11px 19px;font-weight:700;transition:transform .18s,background .18s; }
+    .action:hover:not(:disabled) { background:#265c4e;transform:translateY(-2px); }
+    .secondary { border:1px solid #c9d5cc;border-radius:10px;padding:9px 14px;background:white;font-weight:600; }
+    .secondary:hover:not(:disabled) { background:#eef4ed; }
+    button:disabled { opacity:.5;cursor:not-allowed; }
+    :focus-visible { outline:3px solid #c78c27;outline-offset:3px; }
+    .field { width:100%;border:1px solid #b9c9bd;border-radius:10px;padding:11px 13px;background:#fff;outline:none; }
+    .field:focus { border-color:#2b6957;box-shadow:0 0 0 3px #2b695727; }
+    .guest-name,.guest-title { font-size:22px;line-height:1.5;overflow-wrap:anywhere; }
+    .guest-name.introduced-name { background:#f8df72;color:#173b32;border-radius:7px;padding:1px 8px;box-decoration-break:clone;-webkit-box-decoration-break:clone; }
+    .guest-line { display:flex;flex-wrap:wrap;column-gap:.5rem;align-items:baseline; }
+    .badge { border:1px solid #d8c7a9;background:#fff9e9;color:#604d2f;border-radius:100px;padding:6px 11px;font-size:14px; }
+    .badge:hover { background:#f7e8c7; }
+    .guest-card { animation:rise .3s both; }
+    @keyframes rise { from { opacity:0;transform:translateY(8px) } to { opacity:1;transform:translateY(0) } }
+    [hidden] { display:none!important; }
+  </style>
+  <script src="https://cdn.tailwindcss.com/3.4.17" type="text/javascript"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.577.0/dist/umd/lucide.min.js" type="text/javascript"></script>
+  <script src="/_sdk/ea2423e0a01a756f.data_sdk.js" type="text/javascript" integrity="sha512-Sg0g23oG9zpxeVGJw6Q935Wt19sv7pbBtYnmz0dqpxqMmhlUFeBYJjrBQheq1xeE/u69m7uZ8NgZRq4P2+K57w=="></script>
+  <script src="/_sdk/a03dce2118604c50.editing_sdk.js" type="text/javascript" integrity="sha512-46sNF42LFaPn7btFIGQBmSR71vjynyOsc5USW8U39AL/x6ZIHAGWe0uHrH+ebFKQRMPNQspbZDL5hclteFjUzA=="></script>
+  <script src="/_sdk/a202d01287f70bbd.resizing_sdk.js" type="text/javascript" integrity="sha512-1HSymNrRbmVrPINeyKeKDVHS1r/3KBjQvJ/IjvgAGUrP4+gPCV6nzQEbyDs7SEReA7mlPuHyFKB9Zk2K9KmXhQ=="></script>
+ </head>
+ <body data-template-id="__page-root" style="background: rgb(245, 243, 233);">
+  <div class="app-shell">
+   <header data-template-id="site-header" class="canva-header topband w-full" style="background: rgb(23, 59, 50);">
+    <div class="max-w-5xl mx-auto px-5 py-6 flex items-center gap-5">
+     <div class="ornament" aria-hidden="true"></div>
+     <div>
+      <p data-template-id="header-kicker" class="canva-text text-[#e7c78c] tracking-[.3em] text-xs mb-1" style="color: rgb(231, 199, 140); font-weight: 400; font-style: normal; font-size: 16px;">YUTIAN ELEMENTARY · ANNIVERSARY</p>
+      <h1 data-template-id="page-title" class="canva-text font-bold leading-tight" style="color: rgb(255, 255, 255); font-weight: 700; font-style: normal; font-size: 32px;">玉田國小｜校慶來賓簽到</h1>
+     </div>
     </div>
-
-    <!-- 全域系統通知訊息框 (取代 alert) -->
-    <div id="system-message" class="hidden fixed bottom-6 right-6 z-50 max-w-sm bg-stone-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-stone-700 flex items-center gap-3 transition-all">
-        <i id="system-message-icon" class="ph-fill ph-check-circle text-emerald-400 text-2xl shrink-0"></i>
-        <p id="system-message-text" class="text-sm font-medium"></p>
-    </div>
-
-    <!-- 自定義確認視窗 Modal (取代 confirm) -->
-    <div id="confirm-modal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-stone-200 transform transition-all">
-            <div class="w-12 h-12 rounded-2xl bg-red-100 text-red-700 flex items-center justify-center mb-4">
-                <i class="ph-fill ph-warning-circle text-3xl"></i>
-            </div>
-            <h3 id="confirm-title" class="text-xl font-bold text-stone-900 mb-2">確認操作</h3>
-            <p id="confirm-desc" class="text-stone-600 text-sm mb-6 leading-relaxed">確定要執行此操作嗎？</p>
-            <div class="flex gap-3">
-                <button onclick="closeConfirmModal()" class="flex-1 py-3 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-sm transition">
-                    取消
-                </button>
-                <button id="confirm-action-btn" class="flex-1 py-3 rounded-xl bg-red-700 hover:bg-red-800 text-white font-bold text-sm shadow-md transition">
-                    確定執行
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ☁️ 雲端同步設定 Modal (免改程式碼串接 Google 試算表) -->
-    <div id="cloud-settings-modal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-        <div class="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-7 shadow-2xl border border-stone-200 my-auto">
-            <div class="flex items-center justify-between pb-4 border-b border-stone-200 mb-5">
-                <div class="flex items-center gap-3">
-                    <div class="w-11 h-11 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center">
-                        <i class="ph-fill ph-cloud-check text-2xl"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-xl font-black text-stone-900">Google 試算表跨裝置同步設定</h3>
-                        <p class="text-xs text-stone-500">已內建玉田國小專屬試算表網址，開箱即用免重新設定</p>
-                    </div>
-                </div>
-                <button onclick="closeCloudSettingsModal()" class="p-2 rounded-xl hover:bg-stone-100 text-stone-500">
-                    <i class="ph-bold ph-x text-xl"></i>
-                </button>
-            </div>
-
-            <!-- 網址輸入區 -->
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-bold text-stone-800 mb-1.5">
-                        Apps Script 網頁應用程式網址
-                    </label>
-                    <input type="url" id="gas-url-input" placeholder="https://script.google.com/macros/s/....../exec"
-                        class="w-full px-4 py-3 rounded-xl bg-stone-50 border border-stone-300 focus:bg-white focus:border-red-700 focus:ring-2 focus:ring-red-700/20 outline-none text-sm font-mono text-stone-800">
-                    <p class="text-xs text-stone-500 mt-1.5">
-                        目前狀態：<span id="modal-sync-status" class="font-bold text-emerald-700">☁️ 雲端已連線（自動每 4 秒同步 Google 試算表）</span>
-                    </p>
-                </div>
-
-                <!-- 3 步驟精簡說明與一鍵複製程式碼 -->
-                <div class="bg-stone-50 rounded-2xl p-4 border border-stone-200 space-y-3 text-xs sm:text-sm text-stone-700">
-                    <div class="flex items-center justify-between">
-                        <span class="font-black text-stone-900">📋 Google 試算表後端欄位與程式說明：</span>
-                        <button type="button" onclick="copyGasCode()" class="px-3 py-1.5 rounded-lg bg-red-800 hover:bg-red-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition">
-                            <i class="ph-bold ph-copy"></i>
-                            <span>一鍵複製 Apps Script 程式碼</span>
-                        </button>
-                    </div>
-                    <ol class="list-decimal list-inside space-y-1.5 text-stone-600 leading-relaxed">
-                        <li>開啟 <strong>Google 試算表</strong>，在第一列 A1~H1 依序填入：<code class="bg-stone-200 px-1.5 py-0.5 rounded text-stone-900 font-mono text-xs">id, organization, title, name, category, note, introduced, checkInTime</code></li>
-                        <li>點選上方選單 <strong>擴充功能 → Apps Script</strong>，貼上剛複製的程式碼並儲存。</li>
-                        <li>點選右上角 <strong>部署 → 新增部署作業 → 網頁應用程式</strong>，將「誰可以存取」設為 <strong>「所有人」</strong>。</li>
-                    </ol>
-                </div>
-
-                <div class="flex flex-col sm:flex-row gap-2.5 pt-2">
-                    <button type="button" onclick="clearGasUrl()" class="px-4 py-3 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-sm transition">
-                        重設回內建預設網址
-                    </button>
-                    <button type="button" onclick="saveGasUrl()" class="flex-1 py-3 rounded-xl bg-gradient-to-r from-red-800 to-red-700 hover:from-red-700 hover:to-red-600 text-white font-black text-sm shadow-md transition flex items-center justify-center gap-1.5">
-                        <i class="ph-bold ph-floppy-disk text-lg text-amber-300"></i>
-                        <span>儲存設定並立即同步</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ========================================== -->
-    <!-- 視圖 0：首頁入口選擇畫面（雙入口設計）       -->
-    <!-- ========================================== -->
-    <main id="view-home" class="flex-1 flex flex-col justify-center items-center p-4 sm:p-8 bg-gradient-to-br from-red-950 via-red-900 to-stone-900 text-white relative overflow-hidden">
-        <!-- 裝飾背景幾何紋理 -->
-        <div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: radial-gradient(#fbbf24 1.5px, transparent 1.5px); background-size: 32px 32px;"></div>
-        <div class="absolute -top-24 -right-24 w-96 h-96 bg-amber-500/20 rounded-full blur-3xl pointer-events-none"></div>
-        <div class="absolute -bottom-24 -left-24 w-96 h-96 bg-red-600/20 rounded-full blur-3xl pointer-events-none"></div>
-
-        <div class="max-w-4xl w-full z-10 flex flex-col items-center text-center my-auto">
-            <!-- 校慶徽章與主標題 -->
-            <div class="mb-6 inline-flex flex-col items-center">
-                <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-b from-amber-300 via-amber-500 to-amber-600 p-1 shadow-2xl mb-4">
-                    <div class="w-full h-full rounded-full bg-red-950 flex flex-col items-center justify-center border-2 border-amber-300/60">
-                        <i class="ph-fill ph-graduation-cap text-amber-400 text-3xl sm:text-4xl"></i>
-                        <span class="text-[10px] tracking-widest text-amber-200 font-bold mt-0.5">YUTIAN</span>
-                    </div>
-                </div>
-                <span class="px-4 py-1 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 text-xs sm:text-sm font-bold tracking-widest mb-3">
-                    宜蘭縣礁溪鄉玉田國民小學 • 健康・善良・樂學
-                </span>
-                <h1 class="font-serif text-3xl sm:text-5xl font-black tracking-tight text-white drop-shadow-md">
-                    玉田國小｜校慶來賓簽到系統
-                </h1>
-                <p class="text-amber-100/80 text-sm sm:text-base mt-3 max-w-xl">
-                    歡迎蒞臨玉田國小校慶盛會！本系統已內建 Google 試算表跨裝置即時同步，簽到處輸入後校長手機立即顯示。
-                </p>
-            </div>
-
-            <!-- 連線狀態指示與設定按鈕 -->
-            <div class="mb-8 flex flex-wrap items-center justify-center gap-2.5">
-                <div id="auth-status-pill" class="px-4 py-2 rounded-full bg-black/35 border border-white/15 text-xs text-amber-200 flex items-center gap-2">
-                    <span id="home-status-dot" class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                    <span id="home-status-text">☁️ 雲端已連線（自動與 Google 試算表即時同步）</span>
-                </div>
-                <button onclick="openCloudSettingsModal()" class="px-4 py-2 rounded-full bg-amber-500/25 hover:bg-amber-500/40 border border-amber-400/50 text-amber-200 text-xs font-bold flex items-center gap-1.5 transition">
-                    <i class="ph-bold ph-cloud-arrow-up text-sm"></i>
-                    <span>☁️ 雲端同步設定</span>
-                </button>
-            </div>
-
-            <!-- 雙入口大卡片 -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-3xl">
-                <!-- 入口一：簽到處管理 -->
-                <button onclick="switchMode('staff')" class="group text-left bg-white/95 hover:bg-white text-stone-900 rounded-3xl p-6 sm:p-8 shadow-2xl border-2 border-transparent hover:border-amber-400 transition-all duration-300 hover:-translate-y-1 active:scale-[0.99] flex flex-col justify-between relative overflow-hidden">
-                    <div class="absolute top-0 right-0 w-32 h-32 bg-red-100 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
-                    <div>
-                        <div class="w-14 h-14 rounded-2xl bg-red-800 text-amber-300 flex items-center justify-center shadow-lg mb-5 relative z-10">
-                            <i class="ph-fill ph-clipboard-text text-3xl"></i>
-                        </div>
-                        <span class="inline-block px-3 py-1 rounded-lg bg-red-100 text-red-800 text-xs font-bold mb-2">工作人員專用</span>
-                        <h2 class="text-2xl sm:text-3xl font-black text-stone-900 mb-2">簽到處管理</h2>
-                        <p class="text-stone-600 text-sm sm:text-base leading-relaxed">
-                            提供來賓快速報到登錄、常用單位與職稱快選、名單搜尋編輯及 CSV 檔案匯出。
-                        </p>
-                    </div>
-                    <div class="mt-6 pt-4 border-t border-stone-200 flex items-center justify-between text-red-800 font-bold text-sm sm:text-base">
-                        <span>進入簽到登錄台</span>
-                        <span class="w-9 h-9 rounded-full bg-red-100 group-hover:bg-red-800 group-hover:text-white flex items-center justify-center transition-colors">
-                            <i class="ph-bold ph-arrow-right text-lg"></i>
-                        </span>
-                    </div>
-                </button>
-
-                <!-- 入口二：校長手機查閱 -->
-                <button onclick="switchMode('principal')" class="group text-left bg-gradient-to-br from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-red-950 rounded-3xl p-6 sm:p-8 shadow-2xl border-2 border-amber-200 transition-all duration-300 hover:-translate-y-1 active:scale-[0.99] flex flex-col justify-between relative overflow-hidden">
-                    <div class="absolute top-0 right-0 w-32 h-32 bg-white/25 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
-                    <div>
-                        <div class="w-14 h-14 rounded-2xl bg-red-950 text-amber-400 flex items-center justify-center shadow-lg mb-5 relative z-10">
-                            <i class="ph-fill ph-device-mobile-speaker text-3xl"></i>
-                        </div>
-                        <span class="inline-block px-3 py-1 rounded-lg bg-red-950/15 text-red-950 text-xs font-extrabold mb-2">台上致詞專區</span>
-                        <h2 class="text-2xl sm:text-3xl font-black text-red-950 mb-2">校長手機查閱</h2>
-                        <p class="text-red-950/85 text-sm sm:text-base font-medium leading-relaxed">
-                            專為單手握持與台上閱讀設計，超大字體高對比顯示，一鍵標記「已介紹」不漏接。
-                        </p>
-                    </div>
-                    <div class="mt-6 pt-4 border-t border-red-950/15 flex items-center justify-between text-red-950 font-black text-sm sm:text-base">
-                        <span>開啟貴賓介紹名單</span>
-                        <span class="w-9 h-9 rounded-full bg-red-950 text-amber-400 group-hover:scale-110 flex items-center justify-center transition-transform">
-                            <i class="ph-bold ph-arrow-right text-lg"></i>
-                        </span>
-                    </div>
-                </button>
-            </div>
-
-            <!-- 底部統計摘要 -->
-            <div class="mt-8 text-amber-200/80 text-xs sm:text-sm flex items-center gap-4">
-                <span>目前總簽到人數：<strong id="home-total-count" class="text-white text-base">0</strong> 位</span>
-                <span>•</span>
-                <span>待介紹：<strong id="home-pending-count" class="text-amber-300 text-base">0</strong> 位</span>
-            </div>
-        </div>
-    </main>
-
-    <!-- ========================================== -->
-    <!-- 視圖 1：模式一「簽到處管理」介面             -->
-    <!-- ========================================== -->
-    <section id="view-staff" class="hidden flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            
-            <!-- 左側：快速登錄表單 (佔 5 欄) -->
-            <div class="lg:col-span-5 bg-white rounded-3xl shadow-md border border-stone-200 p-5 sm:p-6 lg:sticky lg:top-22">
-                <div class="flex items-center justify-between mb-5 pb-3 border-b border-stone-100">
-                    <div class="flex items-center gap-2.5">
-                        <div class="w-10 h-10 rounded-xl bg-red-100 text-red-800 flex items-center justify-center">
-                            <i class="ph-fill ph-user-plus text-2xl"></i>
-                        </div>
-                        <div>
-                            <h2 id="form-heading" class="text-lg sm:text-xl font-black text-stone-900">來賓報到登錄</h2>
-                            <p class="text-xs text-stone-500">輸入後將立即同步至校長手機端</p>
-                        </div>
-                    </div>
-                    <button id="cancel-edit-btn" onclick="resetGuestForm()" class="hidden px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-600 text-xs font-bold">
-                        取消編輯
-                    </button>
-                </div>
-
-                <form id="guest-form" onsubmit="handleGuestSubmit(event)" class="space-y-4">
-                    <input type="hidden" id="edit-guest-id" value="">
-
-                    <!-- 姓名 -->
-                    <div>
-                        <label class="block text-sm font-bold text-stone-700 mb-1">
-                            來賓姓名 <span class="text-red-600">*</span>
-                        </label>
-                        <input type="text" id="input-name" required placeholder="請輸入來賓姓名（例如：林大明）"
-                            class="w-full px-4 py-3 rounded-xl bg-stone-50 border border-stone-300 focus:bg-white focus:border-red-700 focus:ring-2 focus:ring-red-700/20 outline-none text-base font-bold text-stone-900 transition">
-                    </div>
-
-                    <!-- 單位 / 服務機關 -->
-                    <div>
-                        <label class="block text-sm font-bold text-stone-700 mb-1">
-                            單位 / 服務機關 <span class="text-red-600">*</span>
-                        </label>
-                        <input type="text" id="input-org" required placeholder="請輸入或點選下方常用單位"
-                            class="w-full px-4 py-3 rounded-xl bg-stone-50 border border-stone-300 focus:bg-white focus:border-red-700 focus:ring-2 focus:ring-red-700/20 outline-none text-base text-stone-900 transition">
-                        <!-- 常用單位快選標籤 -->
-                        <div class="flex flex-wrap gap-1.5 mt-2">
-                            <button type="button" onclick="fillInput('input-org', '宜蘭縣政府')" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 hover:text-red-900 text-stone-600 text-xs font-medium transition">宜蘭縣政府</button>
-                            <button type="button" onclick="fillInput('input-org', '宜蘭縣議會')" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 hover:text-red-900 text-stone-600 text-xs font-medium transition">宜蘭縣議會</button>
-                            <button type="button" onclick="fillInput('input-org', '礁溪鄉公所')" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 hover:text-red-900 text-stone-600 text-xs font-medium transition">礁溪鄉公所</button>
-                            <button type="button" onclick="fillInput('input-org', '礁溪鄉民代表會')" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 hover:text-red-900 text-stone-600 text-xs font-medium transition">礁溪鄉民代表會</button>
-                            <button type="button" onclick="fillInput('input-org', '玉田國小家長會')" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 hover:text-red-900 text-stone-600 text-xs font-medium transition">玉田國小家長會</button>
-                            <button type="button" onclick="fillInput('input-org', '玉田國小校友會')" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 hover:text-red-900 text-stone-600 text-xs font-medium transition">玉田國小校友會</button>
-                            <button type="button" onclick="fillInput('input-org', '玉田社區發展協會')" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 hover:text-red-900 text-stone-600 text-xs font-medium transition">玉田社區發展協會</button>
-                        </div>
-                    </div>
-
-                    <!-- 職稱 -->
-                    <div>
-                        <label class="block text-sm font-bold text-stone-700 mb-1">
-                            職稱 <span class="text-red-600">*</span>
-                        </label>
-                        <input type="text" id="input-title" required placeholder="請輸入或點選下方常用職稱"
-                            class="w-full px-4 py-3 rounded-xl bg-stone-50 border border-stone-300 focus:bg-white focus:border-red-700 focus:ring-2 focus:ring-red-700/20 outline-none text-base text-stone-900 transition">
-                        <!-- 常用職稱快選標籤 -->
-                        <div class="flex flex-wrap gap-1.5 mt-2">
-                            <button type="button" onclick="fillInput('input-title', '縣長')" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 hover:text-red-900 text-stone-600 text-xs font-medium transition">縣長</button>
-                            <button type="button" onclick="fillInput('input-title', '議員')" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 hover:text-red-900 text-stone-600 text-xs font-medium transition">議員</button>
-                            <button type="button" onclick="fillInput('input-title', '鄉長')" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 hover:text-red-900 text-stone-600 text-xs font-medium transition">鄉長</button>
-                            <button type="button" onclick="fillInput('input-title', '主席')" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 hover:text-red-900 text-stone-600 text-xs font-medium transition">主席</button>
-                            <button type="button" onclick="fillInput('input-title', '代表')" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 hover:text-red-900 text-stone-600 text-xs font-medium transition">代表</button>
-                            <button type="button" onclick="fillInput('input-title', '村長')" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 hover:text-red-900 text-stone-600 text-xs font-medium transition">村長</button>
-                            <button type="button" onclick="fillInput('input-title', '會長')" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 hover:text-red-900 text-stone-600 text-xs font-medium transition">會長</button>
-                            <button type="button" onclick="fillInput('input-title', '校長')" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 hover:text-red-900 text-stone-600 text-xs font-medium transition">校長</button>
-                            <button type="button" onclick="fillInput('input-title', '理事長')" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 hover:text-red-900 text-stone-600 text-xs font-medium transition">理事長</button>
-                        </div>
-                    </div>
-
-                    <!-- 來賓類別 -->
-                    <div>
-                        <label class="block text-sm font-bold text-stone-700 mb-1">
-                            貴賓類別（影響介紹排序）
-                        </label>
-                        <select id="input-category" class="w-full px-4 py-3 rounded-xl bg-stone-50 border border-stone-300 focus:bg-white focus:border-red-700 focus:ring-2 focus:ring-red-700/20 outline-none text-base font-medium text-stone-900 transition">
-                            <option value="長官貴賓">1. 長官貴賓（縣府、鄉公所、教育處等）</option>
-                            <option value="民意代表">2. 民意代表（立委、議員、代表、村長）</option>
-                            <option value="友校校長">3. 友校校長（各級學校校長、主任）</option>
-                            <option value="家長會/校友">4. 家長會 / 校友（歷任會長、傑出校友）</option>
-                            <option value="地方仕紳/其他">5. 地方仕紳 / 其他（社區協會、顧問、企業）</option>
-                        </select>
-                    </div>
-
-                    <!-- 備註 / 介紹重點 -->
-                    <div>
-                        <label class="block text-sm font-bold text-stone-700 mb-1">
-                            備註 / 介紹重點 <span class="text-stone-400 font-normal">(選填)</span>
-                        </label>
-                        <input type="text" id="input-note" placeholder="例：贊助校慶經費、第15屆傑出校友、特別致意"
-                            class="w-full px-4 py-3 rounded-xl bg-stone-50 border border-stone-300 focus:bg-white focus:border-red-700 focus:ring-2 focus:ring-red-700/20 outline-none text-sm text-stone-900 transition">
-                    </div>
-
-                    <!-- 送出按鈕 -->
-                    <button type="submit" id="submit-guest-btn" class="w-full py-4 rounded-2xl bg-gradient-to-r from-red-800 to-red-700 hover:from-red-700 hover:to-red-600 active:scale-[0.99] text-white font-black text-lg shadow-lg shadow-red-900/20 flex items-center justify-center gap-2 transition">
-                        <i class="ph-bold ph-check-circle text-xl text-amber-300"></i>
-                        <span id="submit-btn-text">確認報到並同步</span>
-                    </button>
-                </form>
-            </div>
-
-            <!-- 右側：即時名單管理列表 (佔 7 欄) -->
-            <div class="lg:col-span-7 space-y-5">
-                
-                <!-- 統計數據卡片列 -->
-                <div class="grid grid-cols-3 gap-3 sm:gap-4">
-                    <div class="bg-white rounded-2xl p-4 shadow-sm border border-stone-200">
-                        <p class="text-xs font-bold text-stone-500">已簽到總人數</p>
-                        <p id="stat-total" class="text-2xl sm:text-3xl font-black text-stone-900 mt-1">0</p>
-                    </div>
-                    <div class="bg-amber-50 rounded-2xl p-4 shadow-sm border border-amber-200">
-                        <p class="text-xs font-bold text-amber-800">待校長介紹</p>
-                        <p id="stat-pending" class="text-2xl sm:text-3xl font-black text-amber-700 mt-1">0</p>
-                    </div>
-                    <div class="bg-emerald-50 rounded-2xl p-4 shadow-sm border border-emerald-200">
-                        <p class="text-xs font-bold text-emerald-800">已完成介紹</p>
-                        <p id="stat-introduced" class="text-2xl sm:text-3xl font-black text-emerald-700 mt-1">0</p>
-                    </div>
-                </div>
-
-                <!-- 工具列：搜尋、類別篩選、匯出與測試資料 -->
-                <div class="bg-white rounded-3xl p-4 sm:p-5 shadow-sm border border-stone-200 space-y-4">
-                    <div class="flex flex-col sm:flex-row gap-3">
-                        <div class="relative flex-1">
-                            <i class="ph ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400 text-lg"></i>
-                            <input type="text" id="staff-search" oninput="renderStaffList()" placeholder="搜尋姓名、單位、職稱或備註..."
-                                class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-stone-100 border border-transparent focus:bg-white focus:border-red-700 outline-none text-sm transition">
-                        </div>
-                        <select id="staff-filter-category" onchange="renderStaffList()" class="px-3.5 py-2.5 rounded-xl bg-stone-100 border border-transparent focus:bg-white focus:border-red-700 outline-none text-sm font-bold text-stone-700">
-                            <option value="ALL">全部類別</option>
-                            <option value="長官貴賓">長官貴賓</option>
-                            <option value="民意代表">民意代表</option>
-                            <option value="友校校長">友校校長</option>
-                            <option value="家長會/校友">家長會/校友</option>
-                            <option value="地方仕紳/其他">地方仕紳/其他</option>
-                        </select>
-                    </div>
-
-                    <!-- 快捷功能按鈕列 -->
-                    <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-stone-100">
-                        <div class="flex flex-wrap gap-2">
-                            <button onclick="seedSampleData()" class="px-3 py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold flex items-center gap-1.5 transition">
-                                <i class="ph-bold ph-sparkle"></i>
-                                <span>一鍵填入測試範例資料</span>
-                            </button>
-                            <button onclick="exportToCSV()" class="px-3 py-1.5 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-900 text-xs font-bold flex items-center gap-1.5 transition">
-                                <i class="ph-bold ph-download-simple"></i>
-                                <span>匯出 CSV 名單</span>
-                            </button>
-                        </div>
-                        <span class="text-xs text-stone-400">依報到時間新到舊排列</span>
-                    </div>
-                </div>
-
-                <!-- 來賓名單卡片容器 -->
-                <div id="staff-guest-list" class="space-y-3">
-                    <!-- 動態生成名單項目 -->
-                </div>
-            </div>
-        </div>
+   </header>
+   <main class="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+    <section id="home-view" aria-label="選擇入口">
+     <div class="mb-8">
+      <p data-template-id="welcome-eyebrow" class="canva-text text-[#a26d2e] font-bold tracking-widest mb-3" style="color: rgb(162, 109, 46); font-weight: 400; font-style: normal; font-size: 28px;">歡迎蒞臨</p>
+      <h2 data-template-id="welcome-title" class="canva-text font-bold" style="color: rgb(23, 59, 50); font-weight: 700; font-style: normal; font-size: 24px;">一同見證，值得紀念的日子。</h2>
+      <p data-template-id="welcome-desc" class="canva-text text-[#62776f] mt-3" style="color: rgb(98, 119, 111); font-weight: 400; font-style: normal; font-size: 16px;">請依使用身分選擇入口，掌握來賓簽到資訊。</p>
+     </div>
+     <div class="grid md:grid-cols-2 gap-5">
+      <article data-template-id="manager-card" class="canva-card surface rounded-2xl p-7 sm:p-9" style="background: rgb(255, 253, 247);"><span class="text-[#bd8d46] text-3xl" aria-hidden="true">✦</span>
+       <h3 data-template-id="manager-card-title" class="canva-text font-bold mt-4" style="color: rgb(23, 59, 50); font-weight: 700; font-style: normal; font-size: 28px;">簽到處管理</h3>
+       <p data-template-id="manager-card-desc" class="canva-text text-[#62776f] mt-3 mb-8" style="color: rgb(98, 119, 111); font-weight: 400; font-style: normal; font-size: 16px;">登錄來賓、修正資料並維護名單順序。</p><button type="button" id="open-manager" data-template-id="open-manager-label" class="canva-button action w-full sm:w-auto" style="background: rgb(23, 59, 50); color: rgb(255, 255, 255); font-weight: 400; font-style: normal; font-size: 16px;">進入管理入口 →</button>
+      </article>
+      <article data-template-id="viewer-card" class="canva-card surface rounded-2xl p-7 sm:p-9" style="background: rgb(255, 253, 247);"><span class="text-[#bd8d46] text-3xl" aria-hidden="true">◎</span>
+       <h3 data-template-id="viewer-card-title" class="canva-text font-bold mt-4" style="color: rgb(23, 59, 50); font-weight: 700; font-style: normal; font-size: 28px;">校長手機查閱</h3>
+       <p data-template-id="viewer-card-desc" class="canva-text text-[#62776f] mt-3 mb-8" style="color: rgb(98, 119, 111); font-weight: 400; font-style: normal; font-size: 16px;">免密碼查看最新來賓名單，無管理操作。</p><button type="button" id="open-viewer" data-template-id="open-viewer-label" class="canva-button action w-full sm:w-auto" style="background: rgb(23, 59, 50); color: rgb(255, 255, 255); font-weight: 400; font-style: normal; font-size: 16px;">僅查看名單 →</button>
+      </article>
+     </div>
     </section>
-
-    <!-- ========================================== -->
-    <!-- 視圖 2：模式二「校長手機查閱」介面           -->
-    <!-- ========================================== -->
-    <section id="view-principal" class="hidden flex-1 max-w-2xl w-full mx-auto px-3 sm:px-5 py-4 pb-20">
-        
-        <!-- 頂部狀態分頁切換 (待介紹 / 已介紹 / 全部) -->
-        <div class="bg-stone-200/90 p-1.5 rounded-2xl grid grid-cols-3 gap-1.5 mb-4 shadow-inner">
-            <button onclick="setPrincipalTab('pending')" id="tab-pending" class="py-3 rounded-xl font-black text-sm sm:text-base transition flex items-center justify-center gap-1.5 bg-red-900 text-amber-300 shadow-md">
-                <span>待介紹</span>
-                <span id="p-badge-pending" class="px-2 py-0.5 rounded-full text-xs bg-amber-400 text-red-950 font-black">0</span>
-            </button>
-            <button onclick="setPrincipalTab('introduced')" id="tab-introduced" class="py-3 rounded-xl font-bold text-sm sm:text-base transition flex items-center justify-center gap-1.5 text-stone-600 hover:text-stone-900">
-                <span>已介紹</span>
-                <span id="p-badge-introduced" class="px-2 py-0.5 rounded-full text-xs bg-stone-300 text-stone-700 font-bold">0</span>
-            </button>
-            <button onclick="setPrincipalTab('all')" id="tab-all" class="py-3 rounded-xl font-bold text-sm sm:text-base transition flex items-center justify-center gap-1.5 text-stone-600 hover:text-stone-900">
-                <span>全部</span>
-                <span id="p-badge-all" class="px-2 py-0.5 rounded-full text-xs bg-stone-300 text-stone-700 font-bold">0</span>
-            </button>
+    <section id="manager-view" hidden="" aria-label="簽到處管理">
+     <div class="flex flex-wrap justify-between items-center gap-3 mb-6">
+      <div>
+       <p data-template-id="manager-eyebrow" class="canva-text text-[#a26d2e] font-semibold mb-1" style="color: rgb(162, 109, 46); font-weight: 400; font-style: normal; font-size: 16px;">STAFF DESK</p>
+       <h2 data-template-id="manager-heading" class="canva-text font-bold" style="color: rgb(23, 59, 50); font-weight: 700; font-style: normal; font-size: 24px;">簽到處管理</h2>
+      </div><button type="button" class="secondary" data-template-id="manager-back" id="manager-home" style="font-weight: 400; font-style: normal; font-size: 16px;">← 返回入口</button>
+     </div>
+     <div id="lock-panel" data-template-id="login-card" class="canva-card surface rounded-2xl p-6 sm:p-8 max-w-lg" style="background: rgb(255, 253, 247);">
+      <h3 data-template-id="unlock-heading" class="canva-text font-bold mb-2" style="font-weight: 700; font-style: normal; font-size: 19px;">解鎖管理區</h3>
+      <p data-template-id="password-hint" class="canva-text text-[#62776f] mb-4" style="color: rgb(98, 119, 111); font-weight: 400; font-style: normal; font-size: 16px;">貼心提示：預設管理密碼是 2026</p>
+      <form id="unlock-form" class="space-y-4">
+       <div>
+        <label data-template-id="password-label" class="canva-text block font-semibold mb-2" for="manager-password" style="font-weight: 600; font-style: normal; font-size: 16px;">管理密碼</label><input id="manager-password" class="field" type="password" required="" autocomplete="off" inputmode="numeric">
+       </div><button data-template-id="unlock-button" class="canva-button action" type="submit" style="background: rgb(23, 59, 50); color: rgb(255, 255, 255); font-weight: 400; font-style: normal; font-size: 16px;">解鎖管理區</button>
+      </form>
+      <p data-template-id="lock-disclosure" class="canva-text text-[#62776f] text-sm mt-5" style="color: rgb(98, 119, 111); font-weight: 400; font-style: normal; font-size: 16px;">此密碼僅為頁面操作鎖，無法保護 Canva Sheet 的資料存取權限。</p>
+      <p id="login-error" role="alert" class="text-red-700 mt-3" hidden="">密碼不正確，請再試一次。</p>
+     </div>
+     <div id="management" hidden="">
+      <div class="flex justify-end mb-5">
+       <button type="button" id="lock-button" data-template-id="lock-button-label" class="canva-button secondary" style="font-weight: 400; font-style: normal; font-size: 16px;">鎖定離開</button>
+      </div>
+      <div data-template-id="form-card" class="canva-card surface rounded-2xl p-6 sm:p-8 mb-7" style="background: rgb(255, 253, 247);">
+       <h3 id="add-heading" data-template-id="add-heading-label" class="canva-text font-bold mb-5" style="font-weight: 700; font-style: normal; font-size: 19px;">新增來賓</h3>
+       <h3 id="edit-heading" data-template-id="edit-heading-label" class="canva-text font-bold mb-5" hidden="" style="font-weight: 700; font-style: normal; font-size: 19px;">編輯來賓</h3>
+       <form id="guest-form">
+        <div class="grid sm:grid-cols-2 gap-4 mb-5">
+         <div>
+          <label data-template-id="name-label" class="canva-text block font-semibold mb-2" for="guest-name" style="font-weight: 600; font-style: normal; font-size: 16px;">來賓姓名</label><input id="guest-name" class="field" maxlength="80" required="" autocomplete="off">
+         </div>
+         <div>
+          <label data-template-id="title-label" class="canva-text block font-semibold mb-2" for="guest-title" style="font-weight: 600; font-style: normal; font-size: 16px;">職稱／單位</label><input id="guest-title" class="field" maxlength="120" required="" autocomplete="off">
+         </div>
         </div>
-
-        <!-- 搜尋與排序控制列 -->
-        <div class="flex gap-2 mb-3">
-            <div class="relative flex-1">
-                <i class="ph-bold ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400 text-lg"></i>
-                <input type="text" id="principal-search" oninput="renderPrincipalList()" placeholder="快速搜尋貴賓姓名或單位..."
-                    class="w-full pl-10 pr-4 py-3 rounded-2xl bg-white border border-stone-300 focus:border-red-800 outline-none text-base font-medium shadow-sm">
-            </div>
-            <button onclick="togglePrincipalSort()" id="principal-sort-btn" class="px-3.5 py-3 rounded-2xl bg-white border border-stone-300 text-stone-700 font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-sm shrink-0 active:bg-stone-100">
-                <i class="ph-bold ph-sort-ascending text-base text-red-800"></i>
-                <span id="principal-sort-label">依貴賓層級</span>
-            </button>
+        <p data-template-id="quick-label" class="canva-text font-semibold mb-2" style="font-weight: 600; font-style: normal; font-size: 16px;">職稱快速填入</p>
+        <div id="quick-tags" class="flex flex-wrap gap-2 mb-6" aria-label="職稱快速標籤"></div>
+        <div class="flex flex-wrap gap-3"><button type="submit" id="save-add" data-template-id="save-add-label" class="canva-button action" style="background: rgb(23, 59, 50); color: rgb(255, 255, 255); font-weight: 400; font-style: normal; font-size: 16px;">新增並簽到</button> <button type="submit" id="save-edit" data-template-id="save-edit-label" class="canva-button action" hidden="" style="background: rgb(23, 59, 50); color: rgb(255, 255, 255); font-weight: 400; font-style: normal; font-size: 16px;">儲存更正</button> <button type="button" id="cancel-edit" data-template-id="cancel-edit-label" class="canva-button secondary" hidden="" style="font-weight: 400; font-style: normal; font-size: 16px;">取消編輯</button>
         </div>
-
-        <!-- 橫向滑動類別快選膠囊 -->
-        <div class="flex gap-2 overflow-x-auto no-scrollbar pb-3 mb-2" id="principal-category-pills">
-            <button onclick="setPrincipalCategory('ALL')" data-cat="ALL" class="p-cat-pill shrink-0 px-4 py-2 rounded-full text-sm font-bold bg-stone-900 text-white shadow-sm transition">
-                全部類別
-            </button>
-            <button onclick="setPrincipalCategory('長官貴賓')" data-cat="長官貴賓" class="p-cat-pill shrink-0 px-4 py-2 rounded-full text-sm font-bold bg-white text-stone-700 border border-stone-300 transition">
-                長官貴賓
-            </button>
-            <button onclick="setPrincipalCategory('民意代表')" data-cat="民意代表" class="p-cat-pill shrink-0 px-4 py-2 rounded-full text-sm font-bold bg-white text-stone-700 border border-stone-300 transition">
-                民意代表
-            </button>
-            <button onclick="setPrincipalCategory('友校校長')" data-cat="友校校長" class="p-cat-pill shrink-0 px-4 py-2 rounded-full text-sm font-bold bg-white text-stone-700 border border-stone-300 transition">
-                友校校長
-            </button>
-            <button onclick="setPrincipalCategory('家長會/校友')" data-cat="家長會/校友" class="p-cat-pill shrink-0 px-4 py-2 rounded-full text-sm font-bold bg-white text-stone-700 border border-stone-300 transition">
-                家長會/校友
-            </button>
-            <button onclick="setPrincipalCategory('地方仕紳/其他')" data-cat="地方仕紳/其他" class="p-cat-pill shrink-0 px-4 py-2 rounded-full text-sm font-bold bg-white text-stone-700 border border-stone-300 transition">
-                地方仕紳/其他
-            </button>
-        </div>
-
-        <!-- 字體大小調節列 (方便校長依舞台光線調整閱讀字級) -->
-        <div class="flex items-center justify-between bg-white/80 px-4 py-2 rounded-2xl border border-stone-200 mb-3 text-xs">
-            <span class="font-bold text-stone-600 flex items-center gap-1.5">
-                <i class="ph-bold ph-text-aa text-base text-red-800"></i> 閱讀字體大小：
-            </span>
-            <div class="flex gap-1.5">
-                <button onclick="setPrincipalFontSize('normal')" id="font-btn-normal" class="px-2.5 py-1 rounded-lg font-bold bg-stone-200 text-stone-700 transition">標準</button>
-                <button onclick="setPrincipalFontSize('large')" id="font-btn-large" class="px-2.5 py-1 rounded-lg font-black bg-red-900 text-amber-300 transition">特大</button>
-                <button onclick="setPrincipalFontSize('xlarge')" id="font-btn-xlarge" class="px-2.5 py-1 rounded-lg font-bold bg-stone-200 text-stone-700 transition">超大</button>
-            </div>
-        </div>
-
-        <!-- 校長專用大字貴賓卡片列表 -->
-        <div id="principal-guest-list" class="space-y-4">
-            <!-- 動態生成超大字體高對比卡片 -->
-        </div>
-
+       </form>
+      </div>
+      <div class="flex items-baseline justify-between gap-3 mb-4">
+       <h3 data-template-id="manager-list-heading" class="canva-text font-bold" style="font-weight: 700; font-style: normal; font-size: 19px;">來賓名單</h3><span id="manager-count" class="text-[#62776f]" aria-live="polite"></span>
+      </div>
+      <p id="manager-empty" data-template-id="manager-empty-label" class="canva-text surface rounded-xl p-6 text-center text-[#62776f]" hidden="" style="color: rgb(98, 119, 111); font-weight: 400; font-style: normal; font-size: 16px;">尚無來賓，請先新增第一筆簽到。</p>
+      <div id="manager-list" class="space-y-3"></div>
+     </div>
     </section>
-
-    <!-- ========================================== -->
-    <!-- GitHub Pages 雙引擎資料庫核心邏輯            -->
-    <!-- (LocalStorage 持久化 + Google 試算表雲端同步) -->
-    <!-- ========================================== -->
-    <script>
-        // 預設內建的 Google Apps Script 網頁應用程式網址（開箱即用，免設定跨裝置同步）
-        const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbw-Uiwtfc-RyoYH2eXRFZokdHn9IYvSng5YCBod9-qjLPNlaGCm4llv2UwmmxXkDkfnuQ/exec";
-
-        // 儲存鍵值定義
-        const STORAGE_KEY_GUESTS = 'yutian_school_vip_guests_v2';
-        const STORAGE_KEY_GAS_URL = 'yutian_school_gas_api_url_v2';
-
-        // 全域狀態管理
-        let guestsData = []; // 儲存所有來賓資料的本地快取
-        let gasApiUrl = DEFAULT_GAS_URL; // Google Apps Script 網頁應用程式網址
-        let syncIntervalId = null;
-        let isSyncing = false;
-        let knownGuestIds = new Set();
-        let isFirstLoad = true;
-        let currentMode = 'home';
-
-        // 校長端篩選與排序狀態
-        let principalTab = 'pending'; // 'pending' | 'introduced' | 'all'
-        let principalCategory = 'ALL';
-        let principalSortBy = 'category'; // 'category' | 'time'
-        let principalFontSize = 'large'; // 'normal' | 'large' | 'xlarge'
-
-        // 禮賓類別權重排序表
-        const CATEGORY_RANK = {
-            '長官貴賓': 1,
-            '民意代表': 2,
-            '友校校長': 3,
-            '家長會/校友': 4,
-            '地方仕紳/其他': 5
-        };
-
-        // 初始化應用程式
-        function initApp() {
-            // 1. 從 LocalStorage 載入已保存的來賓名單
-            loadGuestsFromLocal();
-
-            // 2. 載入雲端同步網址設定（優先順序：網址參數 ?api=... > localStorage 自訂網址 > DEFAULT_GAS_URL）
-            const urlParams = new URLSearchParams(window.location.search);
-            const paramApi = urlParams.get('api');
-            const savedApi = localStorage.getItem(STORAGE_KEY_GAS_URL);
-
-            if (paramApi && paramApi.startsWith('https://script.google.com/')) {
-                gasApiUrl = paramApi.trim();
-                localStorage.setItem(STORAGE_KEY_GAS_URL, gasApiUrl);
-            } else if (savedApi !== null && savedApi.trim() !== '') {
-                gasApiUrl = savedApi.trim();
-            } else {
-                gasApiUrl = DEFAULT_GAS_URL;
-            }
-            updateConnectionStatusUI();
-
-            // 3. 監聽同一瀏覽器其他分頁的 LocalStorage 變更（同機多分頁即時同步）
-            window.addEventListener('storage', (event) => {
-                if (event.key === STORAGE_KEY_GUESTS) {
-                    const prevIds = new Set(guestsData.map(g => g.id));
-                    loadGuestsFromLocal();
-                    checkAndNotifyNewGuests(prevIds);
-                    updateAllViews();
-                } else if (event.key === STORAGE_KEY_GAS_URL) {
-                    gasApiUrl = event.newValue || DEFAULT_GAS_URL;
-                    setupCloudPolling();
-                    updateConnectionStatusUI();
-                }
-            });
-
-            // 4. 啟動雲端輪詢同步
-            setupCloudPolling();
-            updateAllViews();
+    <section id="viewer-view" hidden="" aria-label="校長手機查閱">
+     <div class="flex flex-wrap justify-between items-center gap-3 mb-6">
+      <div>
+       <p data-template-id="viewer-eyebrow" class="canva-text text-[#a26d2e] font-semibold mb-1" style="color: rgb(162, 109, 46); font-weight: 400; font-style: normal; font-size: 16px;">LIVE GUEST LIST</p>
+       <h2 data-template-id="viewer-heading" class="canva-text font-bold" style="font-weight: 700; font-style: normal; font-size: 24px;">僅查看名單</h2>
+      </div><button type="button" class="secondary" data-template-id="viewer-back" id="viewer-home" style="font-weight: 400; font-style: normal; font-size: 16px;">← 返回入口</button>
+     </div>
+     <p data-template-id="viewer-info" class="canva-text text-[#62776f] mb-5" style="color: rgb(98, 119, 111); font-weight: 400; font-style: normal; font-size: 16px;">每 5 秒自動更新</p>
+     <p id="viewer-count" class="text-[#62776f] mb-3" aria-live="polite"></p>
+     <p id="viewer-empty" data-template-id="viewer-empty-label" class="canva-text surface rounded-xl p-6 text-center text-[#62776f]" hidden="" style="color: rgb(98, 119, 111); font-weight: 400; font-style: normal; font-size: 16px;">目前尚無來賓簽到。</p>
+     <div id="viewer-list" class="space-y-3"></div>
+    </section>
+    <p id="status" role="status" aria-live="polite" class="mt-6 text-[#946319]" hidden=""></p>
+   </main>
+   <footer class="max-w-5xl mx-auto px-6 pb-8 text-[#62776f] text-sm">
+    <span data-template-id="footer-note" class="canva-text" style="color: rgb(98, 119, 111); font-weight: 400; font-style: normal; font-size: 16px;">玉田國小 · 校慶來賓簽到</span>
+   </footer>
+  </div>
+  <template id="guest-card-template">
+   <article data-template-id="guest-card" class="canva-card guest-card surface rounded-xl px-5 py-4 flex flex-wrap sm:flex-nowrap items-start gap-4"><span class="number shrink-0 rounded-full bg-[#e8efdf] text-[#173b32] font-bold min-w-10 h-10 px-2 flex items-center justify-center" aria-label="序號"></span>
+    <div class="flex-1 min-w-0">
+     <div class="guest-line">
+      <span data-template-id="guest-name-text" class="canva-text guest-name font-bold"></span><span data-template-id="guest-title-text" class="canva-text guest-title"></span>
+     </div><span data-template-id="guest-time-label" class="canva-text text-[#62776f] text-sm">簽到時間</span> <time data-template-id="guest-time" class="canva-text text-[#62776f] text-sm"></time>
+    </div>
+    <div class="manager-actions flex flex-wrap gap-2"></div>
+   </article>
+  </template>
+  <template id="tag-template">
+   <button type="button" data-template-id="quick-tag" class="canva-tag badge"></button>
+  </template>
+  <div id="confirm-overlay" class="fixed inset-0 bg-[#10241ec4] z-50 flex items-center justify-center p-4" hidden="">
+   <div data-template-id="confirm-card" class="canva-card bg-[#fffdf7] rounded-2xl p-7 max-w-md w-full shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="confirm-title" style="background: rgb(255, 253, 247);">
+    <h2 id="confirm-title" data-template-id="confirm-heading" class="canva-text font-bold mb-3" style="font-weight: 700; font-style: normal; font-size: 24px;">確認刪除來賓？</h2>
+    <p id="confirm-name" class="font-bold text-xl break-words"></p>
+    <p data-template-id="confirm-warning" class="canva-text text-[#62776f] my-4" style="color: rgb(98, 119, 111); font-weight: 400; font-style: normal; font-size: 16px;">刪除後將重新整理名單順序，此操作無法復原。</p>
+    <div class="flex gap-3 justify-end">
+     <button type="button" id="cancel-delete" data-template-id="cancel-delete-label" class="canva-button secondary" style="font-weight: 400; font-style: normal; font-size: 16px;">取消</button><button type="button" id="confirm-delete" data-template-id="confirm-delete-label" class="canva-button action" style="background: rgb(23, 59, 50); color: rgb(255, 255, 255); font-weight: 400; font-style: normal; font-size: 16px;">確認刪除</button>
+    </div>
+   </div>
+  </div>
+  <script>
+    const tags=['縣長','縣議員','處長','科長','鄉長','鄉代表','主秘','立委','家長會長','家長會副會長','董事長','主委','校長','校長協會總會長'];
+    const $=id=>document.getElementById(id);
+    let records=[],unlocked=false,busy=false,editingId=null,deletingId=null,ready=false,view='home';
+    const timeFormatter=new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',hour:'2-digit',minute:'2-digit',hour12:false});
+    const sorted=()=>[...records].sort((a,b)=>Number(a.order)-Number(b.order)||String(a.__backendId).localeCompare(String(b.__backendId)));
+    const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+    function notice(message){ $('status').textContent=message;$('status').hidden=!message; }
+    function setView(next){
+      view=next;
+      ['home','manager','viewer'].forEach(key=>$(key+'-view').hidden=key!==next);
+      if(next==='manager') $('manager-password').focus();
+      notice('');
+      render();
+    }
+    function lock(){
+      unlocked=false;editingId=null;deletingId=null;
+      $('manager-password').value='';$('lock-panel').hidden=false;$('management').hidden=true;
+      $('confirm-overlay').hidden=true;resetForm();setView('home');
+    }
+    function setBusy(value){busy=value;document.querySelectorAll('#management button,#confirm-overlay button').forEach(button=>button.disabled=value);}
+    function resetForm(){
+      editingId=null;$('guest-form').reset();
+      $('add-heading').hidden=false;$('edit-heading').hidden=true;
+      $('save-add').hidden=false;$('save-edit').hidden=true;$('cancel-edit').hidden=true;
+    }
+    function renderList(target,admin){
+      const list=$(target),items=sorted(),existing=new Map([...list.children].map(node=>[node.dataset.recordId,node]));
+      items.forEach((item,index)=>{
+        let card=existing.get(item.__backendId);
+        if(!card){
+          card=$('guest-card-template').content.firstElementChild.cloneNode(true);
+          card.dataset.recordId=item.__backendId;
+        } else existing.delete(item.__backendId);
+        card.querySelector('.number').textContent=index+1;
+        const nameText=card.querySelector('[data-template-id="guest-name-text"]');
+        nameText.textContent=item.name;
+        nameText.classList.toggle('introduced-name',admin===false&&item.introduced===true);
+        card.querySelector('[data-template-id="guest-title-text"]').textContent=item.title;
+        const date=new Date(item.signed_at);
+        card.querySelector('[data-template-id="guest-time"]').textContent=Number.isNaN(date.getTime())?'—':timeFormatter.format(date);
+        const actions=card.querySelector('.manager-actions');
+        if(admin && !actions.children.length){
+          [['上移','up'],['下移','down'],['編輯','edit'],['刪除','delete']].forEach(([label,action])=>{
+            const button=document.createElement('button');button.type='button';button.className='secondary text-sm';button.textContent=label;
+            button.dataset.action=action;actions.appendChild(button);
+          });
         }
-
-        // 從 LocalStorage 讀取名單
-        function loadGuestsFromLocal() {
-            try {
-                const raw = localStorage.getItem(STORAGE_KEY_GUESTS);
-                if (raw) {
-                    const parsed = JSON.parse(raw);
-                    if (Array.isArray(parsed)) {
-                        guestsData = parsed;
-                        if (isFirstLoad) {
-                            guestsData.forEach(g => knownGuestIds.add(g.id));
-                            isFirstLoad = false;
-                        }
-                    }
-                }
-            } catch (err) {
-                console.error("讀取本機資料失敗:", err);
-            }
+        if(!admin){
+          if(!actions.children.length){
+            const button=document.createElement('button');button.type='button';button.className='secondary text-sm';button.dataset.action='introduced';
+            actions.appendChild(button);
+          }
+          const introButton=actions.querySelector('[data-action="introduced"]');
+          introButton.textContent=item.introduced===true?'取消已介紹':'標記為已介紹';
+          introButton.setAttribute('aria-pressed',String(item.introduced===true));
+          introButton.disabled=busy;
+        } else {
+          actions.querySelector('[data-action="up"]').disabled=busy||index===0;
+          actions.querySelector('[data-action="down"]').disabled=busy||index===items.length-1;
+          actions.querySelectorAll('button').forEach(button=>{if(button.dataset.action==='edit'||button.dataset.action==='delete')button.disabled=busy;});
         }
-
-        // 寫入名單至 LocalStorage
-        function saveGuestsToLocal() {
-            try {
-                localStorage.setItem(STORAGE_KEY_GUESTS, JSON.stringify(guestsData));
-            } catch (err) {
-                console.error("寫入本機資料失敗:", err);
-                showToastMessage("瀏覽器儲存空間不足，請匯出備份", "error");
-            }
+        list.appendChild(card);
+      });
+      existing.forEach(card=>card.remove());
+      $(admin?'manager-empty':'viewer-empty').hidden=items.length>0;
+      $(admin?'manager-count':'viewer-count').textContent=`共 ${items.length} 位來賓`;
+    }
+    function render(){
+      if(view==='manager'&&unlocked)renderList('manager-list',true);
+      if(view==='viewer')renderList('viewer-list',false);
+    }
+    async function write(method,record){
+      const result=await window.dataSdk[method](record);
+      if(!result.isOk)throw new Error('Canva Sheet 寫入失敗，請稍後重試。');
+      // Canva Sheet rejects successive mutations issued too close together.
+      await wait(560);
+    }
+    async function normalize(list){
+      for(let i=0;i<list.length;i++){
+        if(Number(list[i].order)!==i+1){
+          await write('update',{...list[i],order:i+1});
         }
-
-        // 檢查並推播新報到貴賓（校長端）
-        function checkAndNotifyNewGuests(prevIds) {
-            if (currentMode !== 'principal') return;
-            for (const g of guestsData) {
-                if (!prevIds.has(g.id) && !knownGuestIds.has(g.id)) {
-                    knownGuestIds.add(g.id);
-                    showNewGuestToast(g);
-                    break;
-                }
-            }
-        }
-
-        // 設定 Google Apps Script 雲端輪詢
-        function setupCloudPolling() {
-            if (syncIntervalId) {
-                clearInterval(syncIntervalId);
-                syncIntervalId = null;
-            }
-            if (!gasApiUrl) return;
-
-            // 立即執行第一次抓取，之後每 4 秒同步一次
-            fetchFromGoogleSheets();
-            syncIntervalId = setInterval(fetchFromGoogleSheets, 4000);
-        }
-
-        // 從 Google 試算表抓取最新資料
-        async function fetchFromGoogleSheets() {
-            if (!gasApiUrl || isSyncing) return;
-            isSyncing = true;
-            try {
-                const response = await fetch(gasApiUrl, {
-                    method: 'GET',
-                    cache: 'no-store'
-                });
-                if (!response.ok) throw new Error('HTTP ' + response.status);
-                const data = await response.json();
-
-                if (Array.isArray(data)) {
-                    const prevIds = new Set(guestsData.map(g => g.id));
-                    // 支援不同欄位名稱對應（兼容 organization 或 unit）
-                    guestsData = data.map(row => ({
-                        id: String(row.id || Date.now() + Math.random()),
-                        organization: String(row.organization || row.unit || '').trim(),
-                        title: String(row.title || '').trim(),
-                        name: String(row.name || '').trim(),
-                        category: String(row.category || '地方仕紳/其他').trim(),
-                        note: String(row.note || '').trim(),
-                        introduced: row.introduced === true || String(row.introduced).toUpperCase() === 'TRUE',
-                        checkInTime: Number(row.checkInTime) || Date.now()
-                    })).filter(g => g.name !== '');
-
-                    saveGuestsToLocal();
-                    if (isFirstLoad) {
-                        guestsData.forEach(g => knownGuestIds.add(g.id));
-                        isFirstLoad = false;
-                    } else {
-                        checkAndNotifyNewGuests(prevIds);
-                    }
-                    updateAllViews();
-                    updateConnectionStatusUI(true);
-                }
-            } catch (err) {
-                console.warn("雲端試算表同步暫時異常（已保留本機資料）:", err);
-                updateConnectionStatusUI(false);
-            } finally {
-                isSyncing = false;
-            }
-        }
-
-        // 將單筆異動推送至 Google 試算表
-        async function pushToGoogleSheets(action, payload) {
-            if (!gasApiUrl) return;
-            try {
-                // 使用 text/plain 避免 CORS preflight OPTIONS 請求被 Apps Script 阻擋
-                await fetch(gasApiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'text/plain;charset=utf-8'
-                    },
-                    body: JSON.stringify({ action, ...payload })
-                });
-                // 寫入後延遲 800ms 重新拉取確認同步
-                setTimeout(fetchFromGoogleSheets, 800);
-            } catch (err) {
-                console.warn("推送至 Google 試算表失敗（資料已安全保存於本機）:", err);
-            }
-        }
-
-        // 更新畫面上的連線狀態燈號與文字
-        function updateConnectionStatusUI(isCloudOk = true) {
-            const homeDot = document.getElementById('home-status-dot');
-            const homeText = document.getElementById('home-status-text');
-            const navDot = document.getElementById('nav-sync-dot');
-            const modalStatus = document.getElementById('modal-sync-status');
-
-            if (gasApiUrl) {
-                if (isCloudOk) {
-                    if (homeDot) homeDot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
-                    if (homeText) homeText.textContent = "☁️ 雲端已連線（自動與 Google 試算表即時同步）";
-                    if (navDot) navDot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse inline-block";
-                    if (modalStatus) {
-                        modalStatus.className = "font-bold text-emerald-700";
-                        modalStatus.textContent = "☁️ 雲端已連線（每 4 秒自動與試算表雙向同步）";
-                    }
-                } else {
-                    if (homeDot) homeDot.className = "w-2 h-2 rounded-full bg-amber-400";
-                    if (homeText) homeText.textContent = "⚠️ 雲端連線重試中（目前使用本機離線快取）";
-                    if (navDot) navDot.className = "w-2 h-2 rounded-full bg-amber-400 inline-block";
-                    if (modalStatus) {
-                        modalStatus.className = "font-bold text-amber-700";
-                        modalStatus.textContent = "⚠️ 連線重試中（資料已先保存在本機瀏覽器）";
-                    }
-                }
-            } else {
-                if (homeDot) homeDot.className = "w-2 h-2 rounded-full bg-emerald-400";
-                if (homeText) homeText.textContent = "本機資料庫已就緒（資料自動保存於此裝置）";
-                if (navDot) navDot.className = "w-2 h-2 rounded-full bg-emerald-400 inline-block";
-                if (modalStatus) {
-                    modalStatus.className = "font-bold text-stone-700";
-                    modalStatus.textContent = "單機本機儲存模式（資料保存在此瀏覽器）";
-                }
-            }
-        }
-
-        // ==========================================
-        // 雲端同步設定視窗操作
-        // ==========================================
-        window.openCloudSettingsModal = function() {
-            document.getElementById('gas-url-input').value = gasApiUrl || DEFAULT_GAS_URL;
-            document.getElementById('cloud-settings-modal').classList.remove('hidden');
-        };
-
-        window.closeCloudSettingsModal = function() {
-            document.getElementById('cloud-settings-modal').classList.add('hidden');
-        };
-
-        window.saveGasUrl = function() {
-            const val = document.getElementById('gas-url-input').value.trim();
-            if (val && !val.startsWith('https://script.google.com/')) {
-                showToastMessage("網址格式不正確，請貼上 https://script.google.com/... 開頭的網址", "error");
-                return;
-            }
-            gasApiUrl = val || DEFAULT_GAS_URL;
-            localStorage.setItem(STORAGE_KEY_GAS_URL, gasApiUrl);
-            setupCloudPolling();
-            updateConnectionStatusUI();
-            closeCloudSettingsModal();
-            showToastMessage("已儲存雲端試算表連線設定，正在同步最新資料...");
-        };
-
-        window.clearGasUrl = function() {
-            document.getElementById('gas-url-input').value = DEFAULT_GAS_URL;
-            gasApiUrl = DEFAULT_GAS_URL;
-            localStorage.removeItem(STORAGE_KEY_GAS_URL);
-            setupCloudPolling();
-            updateConnectionStatusUI();
-            showToastMessage("已重設回內建預設的 Google 試算表網址");
-        };
-
-        window.copyGasCode = function() {
-            const code = `function doGet(e) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
-  const data = sheet.getDataRange().getValues();
-  if (data.length <= 1) {
-    return ContentService.createTextOutput(JSON.stringify([])).setMimeType(ContentService.MimeType.JSON);
-  }
-  const headers = data[0];
-  const rows = data.slice(1).map(row => {
-    let obj = {};
-    headers.forEach((h, i) => obj[h] = row[i]);
-    obj.introduced = (obj.introduced === true || String(obj.introduced).toUpperCase() === "TRUE");
-    return obj;
-  });
-  return ContentService.createTextOutput(JSON.stringify(rows)).setMimeType(ContentService.MimeType.JSON);
-}
-
-function doPost(e) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
-  const payload = JSON.parse(e.postData.contents);
-  const data = sheet.getDataRange().getValues();
-
-  if (payload.action === "add") {
-    sheet.appendRow([
-      payload.id, payload.organization, payload.title, payload.name,
-      payload.category, payload.note, false, payload.checkInTime
-    ]);
-  } else if (payload.action === "toggle" || payload.action === "edit" || payload.action === "delete") {
-    for (let i = 1; i < data.length; i++) {
-      if (String(data[i][0]) === String(payload.id)) {
-        if (payload.action === "delete") {
-          sheet.deleteRow(i + 1);
-        } else if (payload.action === "toggle") {
-          sheet.getRange(i + 1, 7).setValue(payload.introduced);
-        } else if (payload.action === "edit") {
-          sheet.getRange(i + 1, 2, 1, 5).setValues([[
-            payload.organization, payload.title, payload.name, payload.category, payload.note
-          ]]);
-        }
-        break;
       }
     }
-  }
-  return ContentService.createTextOutput(JSON.stringify({ status: "ok" })).setMimeType(ContentService.MimeType.JSON);
-}`;
-            const textarea = document.createElement('textarea');
-            textarea.value = code;
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textarea);
-            showToastMessage("已複製 Google Apps Script 程式碼至剪貼簿！");
-        };
-
-        // ==========================================
-        // 視圖模式切換邏輯
-        // ==========================================
-        window.switchMode = function(mode) {
-            currentMode = mode;
-            const viewHome = document.getElementById('view-home');
-            const viewStaff = document.getElementById('view-staff');
-            const viewPrincipal = document.getElementById('view-principal');
-            const navbar = document.getElementById('top-navbar');
-            const modeLabel = document.getElementById('mode-label-text');
-
-            viewHome.classList.add('hidden');
-            viewStaff.classList.add('hidden');
-            viewPrincipal.classList.add('hidden');
-
-            if (mode === 'home') {
-                navbar.classList.add('hidden');
-                viewHome.classList.remove('hidden');
-            } else if (mode === 'staff') {
-                navbar.classList.remove('hidden');
-                viewStaff.classList.remove('hidden');
-                modeLabel.textContent = '模式：簽到處管理台（工作人員）';
-                renderStaffList();
-            } else if (mode === 'principal') {
-                navbar.classList.remove('hidden');
-                viewPrincipal.classList.remove('hidden');
-                modeLabel.textContent = '模式：校長手機查閱端（台上致詞）';
-                renderPrincipalList();
-            }
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        };
-
-        // ==========================================
-        // 表單快速填入與新增/編輯/刪除/介紹狀態操作
-        // ==========================================
-        window.fillInput = function(inputId, value) {
-            const el = document.getElementById(inputId);
-            if (el) {
-                el.value = value;
-                el.focus();
-            }
-        };
-
-        window.handleGuestSubmit = function(event) {
-            event.preventDefault();
-
-            const editId = document.getElementById('edit-guest-id').value.trim();
-            const name = document.getElementById('input-name').value.trim();
-            const organization = document.getElementById('input-org').value.trim();
-            const title = document.getElementById('input-title').value.trim();
-            const category = document.getElementById('input-category').value;
-            const note = document.getElementById('input-note').value.trim();
-
-            if (!name || !organization || !title) {
-                showToastMessage("請填寫完整姓名、單位與職稱！", "error");
-                return;
-            }
-
-            if (editId) {
-                // 編輯既有來賓
-                const idx = guestsData.findIndex(g => g.id === editId);
-                if (idx !== -1) {
-                    guestsData[idx] = {
-                        ...guestsData[idx],
-                        name,
-                        organization,
-                        title,
-                        category,
-                        note
-                    };
-                    saveGuestsToLocal();
-                    pushToGoogleSheets('edit', { id: editId, name, organization, title, category, note });
-                    showToastMessage(`已更新來賓資料：${organization} ${name}`);
-                }
-            } else {
-                // 新增來賓報到
-                const newGuest = {
-                    id: 'vip_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
-                    name,
-                    organization,
-                    title,
-                    category,
-                    note,
-                    introduced: false,
-                    checkInTime: Date.now()
-                };
-                knownGuestIds.add(newGuest.id);
-                guestsData.unshift(newGuest);
-                saveGuestsToLocal();
-                pushToGoogleSheets('add', newGuest);
-                showToastMessage(`報到成功！${organization} ${title} ${name}`);
-            }
-
-            resetGuestForm();
-            updateAllViews();
-        };
-
-        window.editGuest = function(id) {
-            const guest = guestsData.find(g => g.id === id);
-            if (!guest) return;
-
-            document.getElementById('edit-guest-id').value = guest.id;
-            document.getElementById('input-name').value = guest.name;
-            document.getElementById('input-org').value = guest.organization;
-            document.getElementById('input-title').value = guest.title;
-            document.getElementById('input-category').value = guest.category;
-            document.getElementById('input-note').value = guest.note || '';
-
-            document.getElementById('form-heading').textContent = '編輯來賓資料';
-            document.getElementById('submit-btn-text').textContent = '儲存修改並同步';
-            document.getElementById('cancel-edit-btn').classList.remove('hidden');
-
-            document.getElementById('guest-form').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        };
-
-        window.resetGuestForm = function() {
-            document.getElementById('guest-form').reset();
-            document.getElementById('edit-guest-id').value = '';
-            document.getElementById('form-heading').textContent = '來賓報到登錄';
-            document.getElementById('submit-btn-text').textContent = '確認報到並同步';
-            document.getElementById('cancel-edit-btn').classList.add('hidden');
-        };
-
-        window.toggleIntroducedStatus = function(id) {
-            const idx = guestsData.findIndex(g => g.id === id);
-            if (idx === -1) return;
-
-            const newState = !guestsData[idx].introduced;
-            guestsData[idx].introduced = newState;
-            saveGuestsToLocal();
-            pushToGoogleSheets('toggle', { id, introduced: newState });
-
-            updateAllViews();
-            if (newState) {
-                showToastMessage(`已標記介紹完成：${guestsData[idx].name}`);
-            } else {
-                showToastMessage(`已恢復為待介紹：${guestsData[idx].name}`);
-            }
-        };
-
-        window.confirmDeleteGuest = function(id) {
-            const guest = guestsData.find(g => g.id === id);
-            if (!guest) return;
-
-            document.getElementById('confirm-title').textContent = '刪除來賓紀錄';
-            document.getElementById('confirm-desc').textContent = `確定要刪除「${guest.organization} ${guest.title} ${guest.name}」的簽到紀錄嗎？刪除後無法復原。`;
-
-            const actionBtn = document.getElementById('confirm-action-btn');
-            actionBtn.onclick = function() {
-                guestsData = guestsData.filter(g => g.id !== id);
-                saveGuestsToLocal();
-                pushToGoogleSheets('delete', { id });
-                closeConfirmModal();
-                updateAllViews();
-                showToastMessage(`已刪除來賓紀錄：${guest.name}`);
-            };
-
-            document.getElementById('confirm-modal').classList.remove('hidden');
-        };
-
-        window.closeConfirmModal = function() {
-            document.getElementById('confirm-modal').classList.add('hidden');
-        };
-
-        // ==========================================
-        // 簽到處管理列表渲染
-        // ==========================================
-        function renderStaffList() {
-            const container = document.getElementById('staff-guest-list');
-            if (!container) return;
-
-            const searchKeyword = (document.getElementById('staff-search')?.value || '').trim().toLowerCase();
-            const filterCat = document.getElementById('staff-filter-category')?.value || 'ALL';
-
-            const filtered = guestsData
-                .filter(g => {
-                    const matchCat = filterCat === 'ALL' || g.category === filterCat;
-                    const matchSearch = !searchKeyword ||
-                        g.name.toLowerCase().includes(searchKeyword) ||
-                        g.organization.toLowerCase().includes(searchKeyword) ||
-                        g.title.toLowerCase().includes(searchKeyword) ||
-                        (g.note && g.note.toLowerCase().includes(searchKeyword));
-                    return matchCat && matchSearch;
-                })
-                .sort((a, b) => (b.checkInTime || 0) - (a.checkInTime || 0));
-
-            if (filtered.length === 0) {
-                container.innerHTML = `
-                    <div class="bg-white rounded-3xl p-10 text-center border border-dashed border-stone-300 text-stone-400">
-                        <i class="ph ph-users-three text-5xl mb-2 text-stone-300"></i>
-                        <p class="font-bold text-stone-600 text-base">目前尚無符合條件的來賓紀錄</p>
-                        <p class="text-xs mt-1">請從左側表單登錄新來賓，或點擊「一鍵填入測試範例資料」體驗功能</p>
-                    </div>
-                `;
-                return;
-            }
-
-            container.innerHTML = filtered.map(g => {
-                const timeStr = formatTime(g.checkInTime);
-                const statusBadge = g.introduced
-                    ? `<span class="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold flex items-center gap-1"><i class="ph-fill ph-check-circle"></i> 已介紹</span>`
-                    : `<span class="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-bold flex items-center gap-1"><i class="ph-fill ph-clock"></i> 待介紹</span>`;
-
-                return `
-                    <div class="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border ${g.introduced ? 'border-stone-200 opacity-85' : 'border-amber-300/80'} flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition hover:shadow-md">
-                        <div class="space-y-1.5">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="px-2.5 py-0.5 rounded-md bg-red-50 text-red-800 border border-red-200 text-xs font-bold">${escapeHTML(g.category)}</span>
-                                ${statusBadge}
-                                <span class="text-xs text-stone-400 font-mono">${timeStr} 報到</span>
-                            </div>
-                            <div class="flex flex-wrap items-baseline gap-2">
-                                <span class="text-sm sm:text-base font-bold text-stone-600">${escapeHTML(g.organization)}</span>
-                                <span class="text-sm font-bold text-red-800">${escapeHTML(g.title)}</span>
-                                <span class="text-xl font-black text-stone-900">${escapeHTML(g.name)}</span>
-                            </div>
-                            ${g.note ? `<p class="text-xs sm:text-sm text-amber-900 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200/70 inline-block"><i class="ph-fill ph-sparkle text-amber-600 mr-1"></i>${escapeHTML(g.note)}</p>` : ''}
-                        </div>
-                        <div class="flex items-center gap-2 self-end sm:self-center shrink-0">
-                            <button onclick="toggleIntroducedStatus('${g.id}')" title="切換介紹狀態" class="px-3 py-2 rounded-xl ${g.introduced ? 'bg-stone-100 text-stone-600 hover:bg-stone-200' : 'bg-emerald-600 text-white hover:bg-emerald-700'} text-xs font-bold transition">
-                                ${g.introduced ? '設為待介紹' : '標記已介紹'}
-                            </button>
-                            <button onclick="editGuest('${g.id}')" title="編輯資料" class="p-2.5 rounded-xl bg-stone-100 hover:bg-amber-100 text-stone-700 hover:text-amber-900 transition">
-                                <i class="ph-bold ph-pencil-simple text-base"></i>
-                            </button>
-                            <button onclick="confirmDeleteGuest('${g.id}')" title="刪除紀錄" class="p-2.5 rounded-xl bg-stone-100 hover:bg-red-100 text-stone-700 hover:text-red-700 transition">
-                                <i class="ph-bold ph-trash text-base"></i>
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        // ==========================================
-        // 校長手機查閱端操作與渲染
-        // ==========================================
-        window.setPrincipalTab = function(tab) {
-            principalTab = tab;
-            ['pending', 'introduced', 'all'].forEach(t => {
-                const btn = document.getElementById(`tab-${t}`);
-                if (!btn) return;
-                if (t === tab) {
-                    btn.className = "py-3 rounded-xl font-black text-sm sm:text-base transition flex items-center justify-center gap-1.5 bg-red-900 text-amber-300 shadow-md";
-                } else {
-                    btn.className = "py-3 rounded-xl font-bold text-sm sm:text-base transition flex items-center justify-center gap-1.5 text-stone-600 hover:text-stone-900";
-                }
-            });
-            renderPrincipalList();
-        };
-
-        window.setPrincipalCategory = function(cat) {
-            principalCategory = cat;
-            document.querySelectorAll('.p-cat-pill').forEach(btn => {
-                if (btn.dataset.cat === cat) {
-                    btn.className = "p-cat-pill shrink-0 px-4 py-2 rounded-full text-sm font-bold bg-stone-900 text-white shadow-sm transition";
-                } else {
-                    btn.className = "p-cat-pill shrink-0 px-4 py-2 rounded-full text-sm font-bold bg-white text-stone-700 border border-stone-300 transition";
-                }
-            });
-            renderPrincipalList();
-        };
-
-        window.togglePrincipalSort = function() {
-            principalSortBy = principalSortBy === 'category' ? 'time' : 'category';
-            document.getElementById('principal-sort-label').textContent =
-                principalSortBy === 'category' ? '依貴賓層級' : '依報到先後';
-            renderPrincipalList();
-        };
-
-        window.setPrincipalFontSize = function(size) {
-            principalFontSize = size;
-            ['normal', 'large', 'xlarge'].forEach(s => {
-                const btn = document.getElementById(`font-btn-${s}`);
-                if (!btn) return;
-                if (s === size) {
-                    btn.className = "px-2.5 py-1 rounded-lg font-black bg-red-900 text-amber-300 transition";
-                } else {
-                    btn.className = "px-2.5 py-1 rounded-lg font-bold bg-stone-200 text-stone-700 transition";
-                }
-            });
-            renderPrincipalList();
-        };
-
-        function renderPrincipalList() {
-            const container = document.getElementById('principal-guest-list');
-            if (!container) return;
-
-            const searchKeyword = (document.getElementById('principal-search')?.value || '').trim().toLowerCase();
-
-            // 依分頁、類別與搜尋篩選
-            const filtered = guestsData.filter(g => {
-                const matchTab =
-                    principalTab === 'all' ||
-                    (principalTab === 'pending' && !g.introduced) ||
-                    (principalTab === 'introduced' && g.introduced);
-                const matchCat = principalCategory === 'ALL' || g.category === principalCategory;
-                const matchSearch = !searchKeyword ||
-                    g.name.toLowerCase().includes(searchKeyword) ||
-                    g.organization.toLowerCase().includes(searchKeyword) ||
-                    g.title.toLowerCase().includes(searchKeyword) ||
-                    (g.note && g.note.toLowerCase().includes(searchKeyword));
-                return matchTab && matchCat && matchSearch;
-            });
-
-            // 排序
-            filtered.sort((a, b) => {
-                if (principalSortBy === 'category') {
-                    const rankA = CATEGORY_RANK[a.category] || 99;
-                    const rankB = CATEGORY_RANK[b.category] || 99;
-                    if (rankA !== rankB) return rankA - rankB;
-                }
-                return (b.checkInTime || 0) - (a.checkInTime || 0);
-            });
-
-            // 字體級距設定
-            const fontClasses = {
-                normal: { org: 'text-base', title: 'text-lg', name: 'text-2xl', note: 'text-sm' },
-                large:  { org: 'text-lg sm:text-xl', title: 'text-xl sm:text-2xl', name: 'text-3xl sm:text-4xl', note: 'text-base' },
-                xlarge: { org: 'text-xl sm:text-2xl', title: 'text-2xl sm:text-3xl', name: 'text-4xl sm:text-5xl', note: 'text-lg' }
-            }[principalFontSize];
-
-            if (filtered.length === 0) {
-                const emptyText = principalTab === 'pending'
-                    ? '太棒了！目前所有已報到貴賓皆已介紹完畢'
-                    : '目前沒有符合條件的貴賓名單';
-                container.innerHTML = `
-                    <div class="bg-white rounded-3xl p-10 text-center border border-stone-200 shadow-sm">
-                        <i class="ph-fill ph-sparkle text-5xl text-amber-400 mb-3"></i>
-                        <p class="font-black text-stone-800 text-lg">${emptyText}</p>
-                        <p class="text-sm text-stone-500 mt-1">當簽到處登錄新來賓時，畫面將自動即時更新</p>
-                    </div>
-                `;
-                return;
-            }
-
-            container.innerHTML = filtered.map(g => {
-                const isDone = g.introduced;
-                return `
-                    <div class="rounded-3xl p-5 sm:p-6 shadow-md border-2 transition-all ${isDone ? 'bg-stone-100/90 border-stone-300 opacity-75' : 'bg-white border-amber-400'}">
-                        <div class="flex items-center justify-between gap-2 mb-2">
-                            <span class="px-3 py-1 rounded-full text-xs font-black ${isDone ? 'bg-stone-200 text-stone-600' : 'bg-red-900 text-amber-300'}">
-                                ${escapeHTML(g.category)}
-                            </span>
-                            <span class="text-xs font-bold text-stone-400">${formatTime(g.checkInTime)} 蒞臨</span>
-                        </div>
-
-                        <div class="my-2">
-                            <p class="${fontClasses.org} font-bold text-stone-600 leading-snug">
-                                ${escapeHTML(g.organization)}
-                            </p>
-                            <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 mt-1">
-                                <span class="${fontClasses.title} font-extrabold text-red-800">
-                                    ${escapeHTML(g.title)}
-                                </span>
-                                <span class="${fontClasses.name} font-black text-stone-950 tracking-wide">
-                                    ${escapeHTML(g.name)}
-                                </span>
-                            </div>
-                        </div>
-
-                        ${g.note ? `
-                            <div class="mt-3 p-3 rounded-2xl bg-amber-50 border border-amber-300 text-red-950 ${fontClasses.note} font-bold flex items-start gap-2">
-                                <i class="ph-fill ph-star text-amber-500 text-xl shrink-0 mt-0.5"></i>
-                                <span>${escapeHTML(g.note)}</span>
-                            </div>
-                        ` : ''}
-
-                        <button onclick="toggleIntroducedStatus('${g.id}')" class="mt-4 w-full py-3.5 rounded-2xl font-black text-base sm:text-lg flex items-center justify-center gap-2 transition active:scale-[0.98] shadow-sm ${
-                            isDone
-                                ? 'bg-stone-200 hover:bg-stone-300 text-stone-700'
-                                : 'bg-gradient-to-r from-emerald-700 to-emerald-600 hover:from-emerald-600 hover:to-emerald-500 text-white shadow-emerald-900/20'
-                        }">
-                            <i class="ph-bold ${isDone ? 'ph-arrow-u-up-left' : 'ph-check-circle'} text-xl"></i>
-                            <span>${isDone ? '已介紹完畢（點擊恢復待介紹）' : '標記為「已介紹」'}</span>
-                        </button>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        // ==========================================
-        // 統計數據與全域畫面更新
-        // ==========================================
-        function updateAllViews() {
-            const total = guestsData.length;
-            const introduced = guestsData.filter(g => g.introduced).length;
-            const pending = total - introduced;
-
-            // 首頁統計
-            const homeTotal = document.getElementById('home-total-count');
-            const homePending = document.getElementById('home-pending-count');
-            if (homeTotal) homeTotal.textContent = total;
-            if (homePending) homePending.textContent = pending;
-
-            // 簽到處管理統計
-            const statTotal = document.getElementById('stat-total');
-            const statPending = document.getElementById('stat-pending');
-            const statIntroduced = document.getElementById('stat-introduced');
-            if (statTotal) statTotal.textContent = total;
-            if (statPending) statPending.textContent = pending;
-            if (statIntroduced) statIntroduced.textContent = introduced;
-
-            // 校長端徽章統計
-            const pPending = document.getElementById('p-badge-pending');
-            const pIntroduced = document.getElementById('p-badge-introduced');
-            const pAll = document.getElementById('p-badge-all');
-            if (pPending) pPending.textContent = pending;
-            if (pIntroduced) pIntroduced.textContent = introduced;
-            if (pAll) pAll.textContent = total;
-
-            if (currentMode === 'staff') {
-                renderStaffList();
-            } else if (currentMode === 'principal') {
-                renderPrincipalList();
-            }
-        }
-
-        // ==========================================
-        // 測試範例資料與 CSV 匯出
-        // ==========================================
-        window.seedSampleData = function() {
-            const now = Date.now();
-            const samples = [
-                { id: 'sample_1_' + now, organization: '宜蘭縣政府教育處', title: '處長', name: '簡信斌', category: '長官貴賓', note: '代表縣長蒞臨致詞祝賀', introduced: false, checkInTime: now - 300000 },
-                { id: 'sample_2_' + now, organization: '礁溪鄉公所', title: '鄉長', name: '張永德', category: '長官貴賓', note: '長期支持本校特色社團發展', introduced: false, checkInTime: now - 240000 },
-                { id: 'sample_3_' + now, organization: '玉田國小家長會', title: '會長', name: '林志明', category: '家長會/校友', note: '贊助本次校慶全體師生紀念品', introduced: false, checkInTime: now - 180000 },
-                { id: 'sample_4_' + now, organization: '礁溪國民小學', title: '校長', name: '李明哲', category: '友校校長', note: '鄰近友校代表', introduced: true, checkInTime: now - 120000 }
-            ];
-
-            samples.forEach(s => {
-                knownGuestIds.add(s.id);
-                guestsData.unshift(s);
-                pushToGoogleSheets('add', s);
-            });
-
-            saveGuestsToLocal();
-            updateAllViews();
-            showToastMessage("已填入 4 筆校慶測試貴賓資料！");
-        };
-
-        window.exportToCSV = function() {
-            if (guestsData.length === 0) {
-                showToastMessage("目前沒有來賓資料可匯出", "error");
-                return;
-            }
-
-            const headers = ['報到時間', '貴賓類別', '單位/服務機關', '職稱', '來賓姓名', '介紹狀態', '備註/介紹重點'];
-            const rows = guestsData.map(g => [
-                formatTime(g.checkInTime),
-                g.category,
-                g.organization,
-                g.title,
-                g.name,
-                g.introduced ? '已介紹' : '待介紹',
-                g.note || ''
-            ]);
-
-            const csvContent = '\uFEFF' + [headers, ...rows]
-                .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-                .join('\n');
-
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            const dateStr = new Date().toISOString().slice(0, 10);
-            link.href = url;
-            link.download = `玉田國小校慶來賓簽到名單_${dateStr}.csv`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-            showToastMessage("已匯出 Excel 相容 CSV 簽到名單！");
-        };
-
-        // ==========================================
-        // 通知橫幅與工具函式
-        // ==========================================
-        let systemMsgTimer = null;
-        function showToastMessage(msg, type = 'success') {
-            const box = document.getElementById('system-message');
-            const icon = document.getElementById('system-message-icon');
-            const text = document.getElementById('system-message-text');
-            if (!box || !text) return;
-
-            text.textContent = msg;
-            if (type === 'error') {
-                icon.className = 'ph-fill ph-warning-circle text-amber-400 text-2xl shrink-0';
-            } else {
-                icon.className = 'ph-fill ph-check-circle text-emerald-400 text-2xl shrink-0';
-            }
-
-            box.classList.remove('hidden');
-            if (systemMsgTimer) clearTimeout(systemMsgTimer);
-            systemMsgTimer = setTimeout(() => {
-                box.classList.add('hidden');
-            }, 3500);
-        }
-
-        let newGuestToastTimer = null;
-        function showNewGuestToast(guest) {
-            const banner = document.getElementById('new-guest-toast');
-            const info = document.getElementById('toast-guest-info');
-            if (!banner || !info) return;
-
-            info.textContent = `${guest.organization} ${guest.title} ${guest.name}`;
-            banner.classList.remove('hidden');
-
-            if (newGuestToastTimer) clearTimeout(newGuestToastTimer);
-            newGuestToastTimer = setTimeout(() => {
-                banner.classList.add('hidden');
-            }, 6000);
-        }
-
-        window.dismissToast = function() {
-            const banner = document.getElementById('new-guest-toast');
-            if (banner) banner.classList.add('hidden');
-        };
-
-        function formatTime(timestamp) {
-            if (!timestamp) return '';
-            const d = new Date(Number(timestamp));
-            if (isNaN(d.getTime())) return '';
-            const hh = String(d.getHours()).padStart(2, '0');
-            const mm = String(d.getMinutes()).padStart(2, '0');
-            return `${hh}:${mm}`;
-        }
-
-        function escapeHTML(str) {
-            return String(str || '')
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;');
-        }
-
-        // 啟動應用程式
-        window.addEventListener('DOMContentLoaded', initApp);
-    </script>
-</body>
-</html>
+    async function perform(action,success){
+      if(!ready||!unlocked||busy)return;
+      setBusy(true);notice('正在儲存至 Canva Sheet…');
+      try {await action();notice(success);}
+      catch(error){notice(error.message||'儲存失敗，請稍後重試。');}
+      finally {setBusy(false);render();}
+    }
+    $('open-manager').onclick=()=>setView('manager');
+    $('open-viewer').onclick=()=>setView('viewer');
+    $('manager-home').onclick=()=>setView('home');
+    $('viewer-home').onclick=()=>setView('home');
+    $('lock-button').onclick=lock;
+    $('unlock-form').addEventListener('submit',event=>{
+      event.preventDefault();
+      if($('manager-password').value!=='2026'){$('login-error').hidden=false;return;}
+      $('login-error').hidden=true;unlocked=true;$('lock-panel').hidden=true;$('management').hidden=false;render();$('guest-name').focus();
+    });
+    tags.forEach(label=>{
+      const tag=$('tag-template').content.firstElementChild.cloneNode(true);
+      tag.textContent=label;
+      tag.addEventListener('click',()=>{
+        if(!unlocked||busy)return;
+        const field=$('guest-title');
+        field.value=field.value.trim()?field.value.trim()+' '+label:label;
+        field.focus();
+      });
+      $('quick-tags').appendChild(tag);
+    });
+    $('cancel-edit').onclick=resetForm;
+    $('guest-form').addEventListener('submit',async event=>{
+      event.preventDefault();
+      if(!ready||!unlocked||busy)return;
+      const name=$('guest-name').value.trim(),title=$('guest-title').value.trim();
+      if(!name||!title){notice('請填寫來賓姓名與職稱。');return;}
+      if(editingId){
+        const item=records.find(row=>row.__backendId===editingId);
+        if(!item){notice('找不到此來賓，請重新選擇。');resetForm();return;}
+        await perform(async()=>{await write('update',{...item,name,title});resetForm();},'來賓資料已更正。');
+      }else{
+        if(records.length>=999){notice('已達 999 筆上限，請先刪除資料。');return;}
+        await perform(async()=>{
+          const max=Math.max(0,...records.map(row=>Number(row.order)||0));
+          await write('create',{name,title,signed_at:new Date().toISOString(),order:max+1,introduced:false,introduced_order:0});
+          resetForm();
+        },'來賓已簽到並儲存。');
+      }
+    });
+    $('viewer-list').addEventListener('click',async event=>{
+      const button=event.target.closest('button[data-action="introduced"]');
+      if(!button||busy)return;
+      const id=button.closest('[data-record-id]').dataset.recordId,item=records.find(row=>row.__backendId===id);
+      if(!item)return;
+      const introducing=item.introduced!==true;
+      const nextOrder=introducing?Math.max(0,...records.map(row=>Number(row.introduced_order)||0))+1:0;
+      setBusy(true);notice(introducing?'正在同步已介紹狀態…':'正在取消已介紹…');
+      try{
+        await write('update',{...item,introduced:introducing,introduced_order:nextOrder});
+        notice(introducing?'已標記為已介紹。':'已取消已介紹。');
+      }catch(error){notice(error.message||'狀態儲存失敗，請稍後重試。');}
+      finally{setBusy(false);render();}
+    });
+    $('manager-list').addEventListener('click',async event=>{
+      const button=event.target.closest('button[data-action]');
+      if(!button||!unlocked||busy)return;
+      const id=button.closest('[data-record-id]').dataset.recordId,item=records.find(row=>row.__backendId===id);
+      if(!item)return;
+      if(button.dataset.action==='edit'){
+        editingId=id;$('guest-name').value=item.name;$('guest-title').value=item.title;
+        $('add-heading').hidden=true;$('edit-heading').hidden=false;
+        $('save-add').hidden=true;$('save-edit').hidden=false;$('cancel-edit').hidden=false;
+        $('form-card').scrollIntoView({behavior:'smooth',block:'start'});$('guest-name').focus();return;
+      }
+      if(button.dataset.action==='delete'){
+        deletingId=id;$('confirm-name').textContent=item.name;$('confirm-overlay').hidden=false;$('cancel-delete').focus();return;
+      }
+      const list=sorted(),position=list.findIndex(row=>row.__backendId===id);
+      const next=position+(button.dataset.action==='up'?-1:1);
+      if(next<0||next>=list.length)return;
+      const other=list[next];
+      await perform(async()=>{
+        // A temporary order prevents ties while the two Canva Sheet writes complete.
+        const temporary=Math.max(...list.map(row=>Number(row.order)||0))+1;
+        await write('update',{...item,order:temporary});
+        await write('update',{...other,order:position+1});
+        await write('update',{...item,order:next+1});
+        const desired=[...list];[desired[position],desired[next]]=[desired[next],desired[position]];
+        await normalize(desired.map((row,index)=>({...row,order:row.__backendId===item.__backendId?next+1:row.__backendId===other.__backendId?position+1:row.order})));
+      },'名單順序已儲存。');
+    });
+    $('cancel-delete').onclick=()=>{$('confirm-overlay').hidden=true;deletingId=null;};
+    $('confirm-delete').onclick=async()=>{
+      if(!deletingId||!unlocked||busy)return;
+      const item=records.find(row=>row.__backendId===deletingId);
+      if(!item){$('confirm-overlay').hidden=true;return;}
+      await perform(async()=>{
+        await write('delete',item);
+        const remaining=sorted().filter(row=>row.__backendId!==item.__backendId);
+        await normalize(remaining);
+        if(editingId===deletingId)resetForm();
+        deletingId=null;$('confirm-overlay').hidden=true;
+      },'來賓已刪除，序號已重新整理。');
+    };
+    const handler={onDataChanged(data){records=data;render();}};
+    (async()=>{
+      try{
+        const result=await window.dataSdk.init(handler);
+        if(!result.isOk)throw new Error();
+        ready=true;
+      }catch(error){notice('無法連接 Canva Sheet，請重新開啟頁面再試。');}
+    })();
+    setInterval(()=>{if(view==='viewer')render();},5000);
+  </script>
+ 
+</body></html>
